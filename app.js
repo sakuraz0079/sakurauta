@@ -48,6 +48,8 @@ const els = {
   shuffle: document.querySelector("#shuffleButton"),
   refresh: document.querySelector("#refreshButton"),
   newPlaylist: document.querySelector("#newPlaylistButton"),
+  deletePlaylist: document.querySelector("#deletePlaylistButton"),
+  playlistChips: document.querySelector("#playlistChips"),
   playlistForm: document.querySelector("#playlistForm"),
   playlistName: document.querySelector("#playlistNameInput"),
   prevPage: document.querySelector("#prevPageButton"),
@@ -85,11 +87,13 @@ function bindEvents() {
   els.view.addEventListener("change", () => {
     state.view = els.view.value;
     state.page = 1;
+    renderPlaylistOptions();
     render();
   });
 
   els.refresh.addEventListener("click", () => loadTracks({ force: true }));
   els.newPlaylist.addEventListener("click", showPlaylistForm);
+  els.deletePlaylist.addEventListener("click", deleteCurrentPlaylist);
   els.playlistForm.addEventListener("submit", (event) => {
     event.preventDefault();
     createPlaylist(els.playlistName.value);
@@ -310,9 +314,9 @@ function renderTags() {
 function renderPlaylistOptions() {
   const current = state.view;
   const fixed = [
+    ["all", "\u3059\u3079\u3066"],
     ["latest10", "\u6700\u65b010\u66f2"],
     ["favorites", "\u304a\u6c17\u306b\u5165\u308a"],
-    ["all", "\u3059\u3079\u3066"],
     ["recentlyPlayed", "\u6700\u8fd1\u518d\u751f"],
   ];
   els.view.replaceChildren();
@@ -331,6 +335,33 @@ function renderPlaylistOptions() {
     ? current
     : "latest10";
   state.view = els.view.value;
+  els.deletePlaylist.hidden = !state.playlists.some((playlist) => playlist.id === state.view);
+  renderPlaylistChips(fixed);
+}
+
+function renderPlaylistChips(fixed) {
+  els.playlistChips.replaceChildren();
+  for (const [value, label] of fixed) {
+    els.playlistChips.append(makePlaylistChip(value, label));
+  }
+  for (const playlist of state.playlists) {
+    els.playlistChips.append(makePlaylistChip(playlist.id, playlist.name));
+  }
+}
+
+function makePlaylistChip(value, label) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = `playlist-chip${state.view === value ? " active" : ""}`;
+  button.textContent = label;
+  button.addEventListener("click", () => {
+    state.view = value;
+    els.view.value = value;
+    state.page = 1;
+    renderPlaylistOptions();
+    render();
+  });
+  return button;
 }
 
 function makeChip(label, value) {
@@ -403,11 +434,13 @@ function renderInlineDetail(track) {
 
   const facts = document.createElement("div");
   facts.className = "inline-facts";
+  const memberships = playlistMemberships(track.id);
   [
     track.highestNote,
     track.key !== "" && `key ${track.key}`,
     track.version,
     ...track.genreTags,
+    ...memberships,
     track.fileName,
   ].filter(Boolean).forEach((item) => facts.append(makeFact(item)));
   detail.append(facts);
@@ -588,12 +621,13 @@ function toggleFavorite(id) {
 }
 
 function showPlaylistForm() {
-  els.playlistForm.hidden = false;
-  els.playlistName.focus();
+  els.playlistForm.hidden = !els.playlistForm.hidden;
+  if (!els.playlistForm.hidden) els.playlistName.focus();
 }
 
 function createPlaylist(name) {
   if (!name?.trim()) return;
+  const previousView = state.view;
   const playlist = {
     id: `playlist-${Date.now()}-${Math.random().toString(36).slice(2)}`,
     name: name.trim(),
@@ -601,7 +635,7 @@ function createPlaylist(name) {
   };
   state.playlists.push(playlist);
   savePlaylists();
-  state.view = playlist.id;
+  state.view = previousView;
   renderPlaylistOptions();
   els.playlistName.value = "";
   els.playlistForm.hidden = true;
@@ -613,9 +647,27 @@ function addTrackToPlaylist(trackId, playlistId) {
   if (!playlist) return;
   if (!playlist.trackIds.includes(trackId)) playlist.trackIds.push(trackId);
   savePlaylists();
-  state.view = playlist.id;
   renderPlaylistOptions();
   render();
+}
+
+function deleteCurrentPlaylist() {
+  const playlist = state.playlists.find((item) => item.id === state.view);
+  if (!playlist) return;
+  state.playlists = state.playlists.filter((item) => item.id !== playlist.id);
+  state.view = "all";
+  savePlaylists();
+  renderPlaylistOptions();
+  render();
+}
+
+function playlistMemberships(trackId) {
+  const names = [];
+  if (state.favorites.has(trackId)) names.push("\u304a\u6c17\u306b\u5165\u308a");
+  for (const playlist of state.playlists) {
+    if (playlist.trackIds.includes(trackId)) names.push(playlist.name);
+  }
+  return names;
 }
 
 function toggleDetail(id) {

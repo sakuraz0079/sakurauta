@@ -122,7 +122,7 @@ h1 {
 
 .control-row {
   display: grid;
-  grid-template-columns: 1fr 1fr 42px;
+  grid-template-columns: 0.72fr 1.28fr;
   gap: 10px;
 }
 
@@ -149,21 +149,94 @@ h1 {
   color: var(--ink);
 }
 
-.new-list-button {
-  align-self: stretch;
-  min-height: 54px;
+.playlist-box {
+  display: grid;
+  gap: 7px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 253, 248, 0.78);
+}
+
+.playlist-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.playlist-head span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.playlist-head div {
+  display: flex;
+  gap: 6px;
+}
+
+.new-list-button,
+.delete-list-button {
+  width: 30px;
+  height: 30px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel);
   color: var(--accent);
-  font-size: 1.2rem;
+  font-size: 1rem;
   font-weight: 900;
+}
+
+.delete-list-button {
+  color: var(--accent-2);
+}
+
+.sr-only-select {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.playlist-chips {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.playlist-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.playlist-chip {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.playlist-chip.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
 }
 
 .playlist-form {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 72px;
   gap: 8px;
+}
+
+.playlist-form[hidden] {
+  display: none;
 }
 
 .playlist-form input,
