@@ -1,0 +1,16 @@
+{
+  "name": "歌ってみた WAV Library",
+  "short_name": "歌WAV",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f6f4ee",
+  "theme_color": "#13201b",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

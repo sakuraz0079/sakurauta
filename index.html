@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#13201b">
+    <title>Utattemita Library</title>
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="stylesheet" href="./style.css?v=20260601-7">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">WAV Collection</p>
+          <h1>歌ってみた</h1>
+        </div>
+        <button class="icon-button" id="refreshButton" type="button" aria-label="更新" title="更新">↻</button>
+      </header>
+
+      <main>
+        <section class="search-panel" aria-label="検索">
+          <label class="search-box">
+            <span>⌕</span>
+            <input id="searchInput" type="search" autocomplete="off" placeholder="曲名・アーティスト・メモで検索">
+          </label>
+
+          <div class="control-row">
+            <label class="select-wrap">
+              <span>並び替え</span>
+              <select id="sortSelect">
+                <option value="recent">最近追加</option>
+                <option value="title">曲名</option>
+                <option value="artist">アーティスト</option>
+                <option value="favorite">お気に入り</option>
+              </select>
+            </label>
+            <label class="select-wrap">
+              <span>表示</span>
+              <select id="viewSelect">
+                <option value="all">すべて</option>
+                <option value="favorites">お気に入り</option>
+                <option value="recentlyPlayed">最近再生</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="chips" id="tagChips" aria-label="タグ"></div>
+        </section>
+
+        <section class="status-row" aria-live="polite">
+          <span id="countLabel">読み込み中</span>
+          <span id="syncLabel">API確認中</span>
+        </section>
+
+        <section class="track-list" id="trackList" aria-label="曲一覧"></section>
+
+        <nav class="pager" aria-label="ページ">
+          <button id="prevPageButton" type="button">前へ</button>
+          <span id="pageLabel">1 / 1</span>
+          <button id="nextPageButton" type="button">次へ</button>
+        </nav>
+      </main>
+    </div>
+
+    <aside class="player" id="player" aria-label="プレイヤー">
+      <div class="now-playing">
+        <p id="nowTitle">曲を選択</p>
+        <span id="nowArtist">一覧から再生できます</span>
+      </div>
+      <audio id="audio" controls preload="none"></audio>
+    </aside>
+
+    <div class="sheet-backdrop" id="detailBackdrop" hidden></div>
+    <section class="detail-sheet" id="detailSheet" aria-label="曲詳細" aria-modal="true" role="dialog" hidden>
+      <div class="sheet-handle"></div>
+      <header class="detail-header">
+        <div>
+          <p id="detailArtist"></p>
+          <h2 id="detailTitle"></h2>
+        </div>
+        <button class="icon-button" id="closeDetailButton" type="button" aria-label="閉じる" title="閉じる">×</button>
+      </header>
+
+      <div class="detail-actions">
+        <button id="detailPlayButton" type="button">▶ 再生</button>
+        <button id="detailFavoriteButton" type="button">☆ お気に入り</button>
+        <button id="detailPrevButton" type="button">前の曲</button>
+        <button id="detailNextButton" type="button">次の曲</button>
+        <a id="detailOpenButton" href="#" target="_blank" rel="noreferrer">R2音源を開く</a>
+      </div>
+
+      <div class="detail-grid">
+        <section>
+          <h3>基本情報</h3>
+          <dl id="detailBasic"></dl>
+        </section>
+        <section>
+          <h3>歌唱メモ</h3>
+          <dl id="detailVocal"></dl>
+          <p class="detail-memo" id="detailMemo"></p>
+        </section>
+      </div>
+    </section>
+
+    <template id="trackTemplate">
+      <article class="track-card">
+        <button class="play-button" type="button" aria-label="再生">▶</button>
+        <div class="track-main">
+          <h2></h2>
+          <p></p>
+          <div class="track-stats"></div>
+          <div class="track-meta"></div>
+        </div>
+        <button class="favorite-button" type="button" aria-label="お気に入り" title="お気に入り">☆</button>
+      </article>
+    </template>
+
+    <script src="./app.js?v=20260601-7" type="module"></script>
+  </body>
+</html>
