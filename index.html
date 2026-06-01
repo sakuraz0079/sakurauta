@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#13201b">
     <title>Sakurauta</title>
     <link rel="manifest" href="./manifest.webmanifest">
-    <link rel="stylesheet" href="./style.css?v=20260601-14">
+    <link rel="stylesheet" href="./style.css?v=20260601-15">
   </head>
   <body>
     <div class="app-shell">
@@ -17,38 +17,37 @@
 
       <main>
         <section class="search-panel" aria-label="検索">
-          <label class="search-box">
-            <span>⌕</span>
-            <input id="searchInput" type="search" autocomplete="off" placeholder="曲名・アーティスト・メモで検索">
-          </label>
-
-          <div class="control-row">
-            <label class="select-wrap">
-              <span>並び替え</span>
-              <select id="sortSelect">
-                <option value="recent">最近追加</option>
-                <option value="title">曲名</option>
-                <option value="artist">アーティスト</option>
-                <option value="favorite">お気に入り</option>
+          <div class="search-line">
+            <label class="search-box">
+              <span>⌕</span>
+              <input id="searchInput" type="search" autocomplete="off" placeholder="曲名・アーティスト・メモで検索">
+            </label>
+            <label class="sort-mini">
+              <span>↕</span>
+              <select id="sortSelect" aria-label="並び替え">
+                <option value="recent">新</option>
+                <option value="title">曲</option>
+                <option value="artist">人</option>
+                <option value="favorite">★</option>
               </select>
             </label>
+          </div>
 
-            <div class="playlist-box">
-              <div class="playlist-head">
-                <span>再生リスト</span>
-                <div>
-                  <button class="new-list-button" id="newPlaylistButton" type="button" aria-label="リスト作成">＋</button>
-                  <button class="delete-list-button" id="deletePlaylistButton" type="button" aria-label="リスト削除" hidden>×</button>
-                </div>
+          <div class="playlist-box">
+            <div class="playlist-head">
+              <span>再生リスト</span>
+              <div>
+                <button class="new-list-button" id="newPlaylistButton" type="button" aria-label="リスト作成">＋</button>
+                <button class="delete-list-button" id="deletePlaylistButton" type="button" aria-label="リスト削除" hidden>×</button>
               </div>
-              <select id="viewSelect" class="sr-only-select" tabindex="-1" aria-hidden="true">
-                <option value="all">すべて</option>
-                <option value="latest10">最新10曲</option>
-                <option value="favorites">お気に入り</option>
-                <option value="recentlyPlayed">最近再生</option>
-              </select>
-              <div class="playlist-chips" id="playlistChips" aria-label="再生リスト"></div>
             </div>
+            <select id="viewSelect" class="sr-only-select" tabindex="-1" aria-hidden="true">
+              <option value="all">すべて</option>
+              <option value="latest10">最新10曲</option>
+              <option value="favorites">お気に入り</option>
+              <option value="recentlyPlayed">最近再生</option>
+            </select>
+            <div class="playlist-chips" id="playlistChips" aria-label="再生リスト"></div>
           </div>
 
           <form class="playlist-form" id="playlistForm" hidden>
@@ -114,6 +113,6 @@
       </article>
     </template>
 
-    <script src="./app.js?v=20260601-14" type="module"></script>
+    <script src="./app.js?v=20260601-15" type="module"></script>
   </body>
 </html>

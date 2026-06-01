@@ -432,18 +432,36 @@ function renderInlineDetail(track) {
   memo.textContent = track.memo || "\u30e1\u30e2\u306a\u3057";
   detail.append(memo);
 
+  const factsSection = document.createElement("div");
+  factsSection.className = "inline-section";
+  const factsTitle = document.createElement("span");
+  factsTitle.className = "inline-section-title";
+  factsTitle.textContent = "\u66f2\u30c7\u30fc\u30bf";
   const facts = document.createElement("div");
   facts.className = "inline-facts";
-  const memberships = playlistMemberships(track.id);
   [
     track.highestNote,
     track.key !== "" && `key ${track.key}`,
     track.version,
     ...track.genreTags,
-    ...memberships,
     track.fileName,
   ].filter(Boolean).forEach((item) => facts.append(makeFact(item)));
-  detail.append(facts);
+  factsSection.append(factsTitle, facts);
+  detail.append(factsSection);
+
+  const memberships = playlistMemberships(track.id);
+  if (memberships.length) {
+    const memberSection = document.createElement("div");
+    memberSection.className = "inline-section";
+    const memberTitle = document.createElement("span");
+    memberTitle.className = "inline-section-title";
+    memberTitle.textContent = "\u5165\u3063\u3066\u3044\u308b\u30ea\u30b9\u30c8";
+    const memberWrap = document.createElement("div");
+    memberWrap.className = "inline-memberships";
+    memberships.forEach((playlist) => memberWrap.append(makeMembershipChip(track.id, playlist)));
+    memberSection.append(memberTitle, memberWrap);
+    detail.append(memberSection);
+  }
 
   const actions = document.createElement("div");
   actions.className = "inline-actions";
@@ -469,6 +487,21 @@ function makeFact(text) {
   item.className = "inline-fact";
   item.textContent = text;
   return item;
+}
+
+function makeMembershipChip(trackId, playlist) {
+  const chip = document.createElement("span");
+  chip.className = "membership-chip";
+  chip.textContent = playlist.name;
+  if (playlist.removable) {
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.textContent = "×";
+    remove.setAttribute("aria-label", `${playlist.name}\u304b\u3089\u5916\u3059`);
+    remove.addEventListener("click", () => removeTrackFromPlaylist(trackId, playlist.id));
+    chip.append(remove);
+  }
+  return chip;
 }
 
 function makeAction(label, action, primary = false) {
@@ -651,6 +684,15 @@ function addTrackToPlaylist(trackId, playlistId) {
   render();
 }
 
+function removeTrackFromPlaylist(trackId, playlistId) {
+  const playlist = state.playlists.find((item) => item.id === playlistId);
+  if (!playlist) return;
+  playlist.trackIds = playlist.trackIds.filter((id) => id !== trackId);
+  savePlaylists();
+  renderPlaylistOptions();
+  render();
+}
+
 function deleteCurrentPlaylist() {
   const playlist = state.playlists.find((item) => item.id === state.view);
   if (!playlist) return;
@@ -662,12 +704,16 @@ function deleteCurrentPlaylist() {
 }
 
 function playlistMemberships(trackId) {
-  const names = [];
-  if (state.favorites.has(trackId)) names.push("\u304a\u6c17\u306b\u5165\u308a");
-  for (const playlist of state.playlists) {
-    if (playlist.trackIds.includes(trackId)) names.push(playlist.name);
+  const memberships = [];
+  if (state.favorites.has(trackId)) {
+    memberships.push({ id: "favorites", name: "\u304a\u6c17\u306b\u5165\u308a", removable: false });
   }
-  return names;
+  for (const playlist of state.playlists) {
+    if (playlist.trackIds.includes(trackId)) {
+      memberships.push({ id: playlist.id, name: playlist.name, removable: true });
+    }
+  }
+  return memberships;
 }
 
 function toggleDetail(id) {

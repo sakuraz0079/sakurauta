@@ -120,10 +120,32 @@ h1 {
   color: var(--ink);
 }
 
-.control-row {
+.search-line {
   display: grid;
-  grid-template-columns: 0.72fr 1.28fr;
+  grid-template-columns: minmax(0, 1fr) 58px;
   gap: 10px;
+}
+
+.sort-mini {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  align-items: center;
+  gap: 2px;
+  min-height: 52px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--muted);
+  box-shadow: var(--shadow);
+}
+
+.sort-mini select {
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
 }
 
 .select-wrap {
@@ -444,7 +466,19 @@ h1 {
   gap: 7px;
 }
 
-.inline-fact {
+.inline-section {
+  display: grid;
+  gap: 7px;
+}
+
+.inline-section-title {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.inline-fact,
+.membership-chip {
   min-width: 0;
   max-width: 100%;
   padding: 4px 8px;
@@ -456,22 +490,43 @@ h1 {
   overflow-wrap: anywhere;
 }
 
+.inline-memberships {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.membership-chip {
+  border: 1px solid rgba(18, 107, 90, 0.25);
+  background: #e0f1e7;
+  color: #0d5f42;
+}
+
+.membership-chip button {
+  margin-left: 4px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-weight: 900;
+}
+
 .inline-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 7px;
 }
 
 .inline-actions button,
 .inline-actions select {
   display: grid;
   place-items: center;
-  min-height: 40px;
-  padding: 0 10px;
+  min-height: 32px;
+  padding: 0 8px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #f8f5ee;
   color: var(--ink);
+  font-size: 0.82rem;
   text-align: center;
   text-decoration: none;
 }
