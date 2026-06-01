@@ -1,5 +1,4 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbz2PjeyxX01bEjnGa0nkliICSxpAQhFC73qm78eAO6UTZzOAz1liBUN-26PVa7UDzrRuw/exec";
-const R2_BASE_URL = "https://pub-3b279d63cf3f4efdb626192fa8e22ef2.r2.dev/";
 const CACHE_KEY = "utawav.tracks";
 const FAVORITES_KEY = "utawav.favorites";
 const RECENT_KEY = "utawav.recent";
@@ -34,19 +33,6 @@ const els = {
   prevPage: document.querySelector("#prevPageButton"),
   nextPage: document.querySelector("#nextPageButton"),
   page: document.querySelector("#pageLabel"),
-  detailBackdrop: document.querySelector("#detailBackdrop"),
-  detailSheet: document.querySelector("#detailSheet"),
-  detailTitle: document.querySelector("#detailTitle"),
-  detailArtist: document.querySelector("#detailArtist"),
-  detailBasic: document.querySelector("#detailBasic"),
-  detailVocal: document.querySelector("#detailVocal"),
-  detailMemo: document.querySelector("#detailMemo"),
-  detailPlay: document.querySelector("#detailPlayButton"),
-  detailFavorite: document.querySelector("#detailFavoriteButton"),
-  detailPrev: document.querySelector("#detailPrevButton"),
-  detailNext: document.querySelector("#detailNextButton"),
-  detailOpen: document.querySelector("#detailOpenButton"),
-  detailClose: document.querySelector("#closeDetailButton"),
 };
 
 init();
@@ -89,26 +75,13 @@ function bindEvents() {
     render();
     scrollToTop();
   });
-
-  els.detailBackdrop.addEventListener("click", closeDetail);
-  els.detailClose.addEventListener("click", closeDetail);
-  els.detailPlay.addEventListener("click", () => {
-    const track = getDetailTrack();
-    if (track) playTrack(track);
-  });
-  els.detailFavorite.addEventListener("click", () => {
-    const track = getDetailTrack();
-    if (track) toggleFavorite(track.id);
-  });
-  els.detailPrev.addEventListener("click", () => moveDetail(-1));
-  els.detailNext.addEventListener("click", () => moveDetail(1));
   els.audio.addEventListener("ended", playNext);
 }
 
 async function loadTracks({ force = false } = {}) {
   if (new URLSearchParams(location.search).has("demo")) {
     state.tracks = demoTracks();
-    els.sync.textContent = "デモ表示";
+    els.sync.textContent = "\u30c7\u30e2";
     render();
     return;
   }
@@ -116,24 +89,24 @@ async function loadTracks({ force = false } = {}) {
   const cached = readJson(CACHE_KEY);
   if (cached?.length && !force) {
     state.tracks = cached.map(normalizeTrack).filter(Boolean);
-    els.sync.textContent = "保存済み一覧";
+    els.sync.textContent = "\u4fdd\u5b58\u6e08\u307f";
     render();
   }
 
-  els.sync.textContent = "API更新中";
+  els.sync.textContent = "\u66f4\u65b0\u4e2d";
   try {
     const payload = await fetchApiPayload();
     const rows = extractRows(payload);
     state.tracks = rows.map(normalizeTrack).filter(Boolean);
     localStorage.setItem(CACHE_KEY, JSON.stringify(state.tracks));
-    els.sync.textContent = `更新 ${formatTime(new Date())}`;
+    els.sync.textContent = `\u66f4\u65b0 ${formatTime(new Date())}`;
     render();
   } catch (error) {
     if (!state.tracks.length && cached?.length) {
       state.tracks = cached.map(normalizeTrack).filter(Boolean);
     }
     const reason = error?.message ? `: ${error.message}` : "";
-    els.sync.textContent = state.tracks.length ? `API未接続・保存済み表示${reason}` : `API未接続${reason}`;
+    els.sync.textContent = state.tracks.length ? `API\u672a\u63a5\u7d9a\u30fb\u4fdd\u5b58\u6e08\u307f${reason}` : `API\u672a\u63a5\u7d9a${reason}`;
     render();
   }
 }
@@ -197,29 +170,29 @@ function rowsFromValues(values) {
 
 function normalizeTrack(raw, index = 0) {
   if (!raw || typeof raw !== "object") return null;
-  const title = pick(raw, ["title", "曲名", "song", "name", "楽曲名"]);
-  const artist = pick(raw, ["artist", "アーティスト", "original_artist", "原曲アーティスト", "歌手"]);
-  const version = pick(raw, ["category", "version", "バージョン", "mix", "master", "mastering"]);
-  const fileName = pick(raw, ["fileName", "filename", "file", "ファイル名", "wav_filename", "WAV", "wav"]);
-  const url = pick(raw, ["url", "r2_url", "audioUrl", "audio_url", "音源URL", "URL"]) || buildAudioUrl({ artist, title, version, fileName });
+  const title = pick(raw, ["title", "song", "name"]);
+  const artist = pick(raw, ["artist", "original_artist"]);
+  const category = pick(raw, ["category", "version", "mix", "master", "mastering"]);
+  const fileName = pick(raw, ["fileName", "filename", "file", "wav_filename", "WAV", "wav"]);
+  const url = pick(raw, ["url", "r2_url", "audioUrl", "audio_url", "URL"]);
   if (!title && !fileName && !url) return null;
 
-  const tags = normalizeTags(pick(raw, ["tags", "tag", "タグ"]));
-  const date = pick(raw, ["last_updated", "date", "created", "recorded", "追加日", "録音日", "更新日"]);
-  const memo = pick(raw, ["memo", "note", "notes", "メモ", "備考"]);
-  const id = pick(raw, ["id", "ID", "uuid"]) || slug(`${artist}-${title}-${version}-${fileName}-${index}`);
-  const quality = pick(raw, ["quality_score", "quality", "score", "評価"]);
-  const retake = pick(raw, ["retake_count", "retake", "歌いなおし回数"]);
-  const karaokeReady = parseBoolean(raw.karaoke_ready ?? pick(raw, ["karaoke", "カラオケ可", "カラオケ"]));
-  const highestNote = pick(raw, ["highest_note", "最高音"]);
-  const key = pick(raw, ["key", "キー"]);
+  const tags = normalizeTags(pick(raw, ["tags", "tag"]));
+  const date = pick(raw, ["last_updated", "date", "created", "recorded"]);
+  const memo = pick(raw, ["memo", "note", "notes"]);
+  const id = pick(raw, ["id", "ID", "uuid"]) || slug(`${artist}-${title}-${category}-${fileName}-${index}`);
+  const quality = pick(raw, ["quality_score", "quality", "score"]);
+  const retake = pick(raw, ["retake_count", "retake"]);
+  const karaokeReady = parseBoolean(raw.karaoke_ready ?? pick(raw, ["karaoke"]));
+  const highestNote = pick(raw, ["highest_note"]);
+  const key = pick(raw, ["key"]);
 
   return {
     id,
     title: title || stripExtension(fileName) || "Untitled",
     artist: artist || "",
-    version: version || "",
-    tags: [version, ...tags].filter(Boolean),
+    category: category || "",
+    tags: [category, ...tags].filter(Boolean),
     date: date || "",
     displayDate: formatDate(date),
     memo: memo || "",
@@ -230,7 +203,7 @@ function normalizeTrack(raw, index = 0) {
     karaokeReady,
     highestNote,
     key,
-    searchText: [title, artist, version, tags.join(" "), date, memo, fileName, highestNote, key].join(" ").toLowerCase(),
+    searchText: [title, artist, category, tags.join(" "), date, memo, fileName, highestNote, key].join(" ").toLowerCase(),
   };
 }
 
@@ -242,7 +215,7 @@ function render() {
   const start = (state.page - 1) * PAGE_SIZE;
   const pageTracks = tracks.slice(start, start + PAGE_SIZE);
 
-  els.count.textContent = `${tracks.length} / ${state.tracks.length} 曲`;
+  els.count.textContent = `${tracks.length} / ${state.tracks.length} \u66f2`;
   els.page.textContent = `${state.page} / ${pageCount}`;
   els.prevPage.disabled = state.page <= 1;
   els.nextPage.disabled = state.page >= pageCount;
@@ -252,7 +225,7 @@ function render() {
   if (!pageTracks.length) {
     const empty = document.createElement("div");
     empty.className = "empty";
-    empty.textContent = "該当する曲がありません";
+    empty.textContent = "\u8a72\u5f53\u3059\u308b\u66f2\u304c\u3042\u308a\u307e\u305b\u3093";
     els.list.append(empty);
     return;
   }
@@ -264,7 +237,7 @@ function render() {
 
 function renderTags() {
   const tags = [...new Set(state.tracks.flatMap((track) => track.tags))].slice(0, 30);
-  els.tags.replaceChildren(makeChip("すべて", ""));
+  els.tags.replaceChildren(makeChip("\u3059\u3079\u3066", ""));
   for (const tag of tags) {
     els.tags.append(makeChip(tag, tag));
   }
@@ -285,18 +258,21 @@ function makeChip(label, value) {
 
 function renderTrack(track) {
   const node = els.template.content.firstElementChild.cloneNode(true);
+  const expanded = track.id === state.detailId;
   node.classList.toggle("active", track.id === state.currentId);
+  node.classList.toggle("expanded", expanded);
   node.querySelector("h2").textContent = track.title;
-  node.querySelector("p").textContent = track.artist || "アーティスト未設定";
+  node.querySelector("p").textContent = track.artist || "\u30a2\u30fc\u30c6\u30a3\u30b9\u30c8\u672a\u8a2d\u5b9a";
 
   const stats = node.querySelector(".track-stats");
   stats.append(makeStat(starText(track.quality), "stars"));
-  stats.append(makeStat(`生成 ${track.displayDate || "-"}`));
-  stats.append(makeStat(`Re ${track.retake || 0}回`));
-  stats.append(makeStat(track.karaokeReady ? "カラオケ可" : "カラオケ未確認", track.karaokeReady ? "ready" : "not-ready"));
+  stats.append(makeStat(track.displayDate || "-"));
+  stats.append(makeStat(`Re ${track.retake || 0}`));
+  stats.append(makeStat(track.karaokeReady ? "\u6b4c\u3048\u308b" : "\u672a\u78ba\u8a8d",
+    track.karaokeReady ? "ready" : "not-ready"));
 
   const meta = node.querySelector(".track-meta");
-  const metaItems = [track.highestNote && `最高音 ${track.highestNote}`, track.key !== "" && `キー ${track.key}`, track.version].filter(Boolean);
+  const metaItems = [track.highestNote && `Top ${track.highestNote}`, track.key !== "" && `Key ${track.key}`, track.category].filter(Boolean);
   for (const item of metaItems.slice(0, 4)) {
     const pill = document.createElement("span");
     pill.className = "meta-pill";
@@ -316,8 +292,64 @@ function renderTrack(track) {
     event.stopPropagation();
     toggleFavorite(track.id);
   });
-  node.addEventListener("click", () => openDetail(track.id));
+  node.addEventListener("click", () => toggleDetail(track.id));
+  if (expanded) node.append(renderInlineDetail(track));
   return node;
+}
+
+function renderInlineDetail(track) {
+  const detail = document.createElement("div");
+  detail.className = "inline-detail";
+  detail.addEventListener("click", (event) => event.stopPropagation());
+
+  const memo = document.createElement("p");
+  memo.className = "inline-memo";
+  memo.textContent = track.memo || "\u30e1\u30e2\u306a\u3057";
+  detail.append(memo);
+
+  const facts = document.createElement("div");
+  facts.className = "inline-facts";
+  [
+    track.highestNote,
+    track.key !== "" && `key ${track.key}`,
+    track.category,
+    track.fileName,
+  ].filter(Boolean).forEach((item) => facts.append(makeFact(item)));
+  detail.append(facts);
+
+  const actions = document.createElement("div");
+  actions.className = "inline-actions";
+  actions.append(makeAction("\u518d\u751f", () => playTrack(track), true));
+  actions.append(makeAction(state.favorites.has(track.id) ? "★ \u304a\u6c17\u306b\u5165\u308a" : "☆ \u304a\u6c17\u306b\u5165\u308a", () => toggleFavorite(track.id)));
+  actions.append(makeAction("\u524d\u306e\u66f2", () => moveDetail(-1)));
+  actions.append(makeAction("\u6b21\u306e\u66f2", () => moveDetail(1)));
+
+  const open = document.createElement("a");
+  open.href = track.url || "#";
+  open.target = "_blank";
+  open.rel = "noreferrer";
+  open.textContent = "R2\u97f3\u6e90\u3092\u958b\u304f";
+  if (!track.url) open.setAttribute("aria-disabled", "true");
+  actions.append(open);
+  detail.append(actions);
+
+  return detail;
+}
+
+function makeFact(text) {
+  const item = document.createElement("span");
+  item.className = "inline-fact";
+  item.textContent = text;
+  return item;
+}
+
+function makeAction(label, action, primary = false) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.textContent = label;
+  button.className = primary ? "primary-action" : "";
+  button.addEventListener("click", action);
+  return button;
 }
 
 function makeStat(text, className = "") {
@@ -354,11 +386,10 @@ function playTrack(track) {
   els.audio.src = track.url;
   els.audio.play().catch(() => {});
   els.nowTitle.textContent = track.title;
-  els.nowArtist.textContent = [track.artist, track.version].filter(Boolean).join(" / ") || track.url;
+  els.nowArtist.textContent = [track.artist, track.category].filter(Boolean).join(" / ") || track.url;
   state.recent = [track.id, ...state.recent.filter((id) => id !== track.id)].slice(0, 50);
   localStorage.setItem(RECENT_KEY, JSON.stringify(state.recent));
   render();
-  if (state.detailId) renderDetail();
 }
 
 function playNext() {
@@ -373,76 +404,21 @@ function toggleFavorite(id) {
   else state.favorites.add(id);
   localStorage.setItem(FAVORITES_KEY, JSON.stringify([...state.favorites]));
   render();
-  if (state.detailId) renderDetail();
 }
 
-function openDetail(id) {
-  state.detailId = id;
-  renderDetail();
-  els.detailBackdrop.hidden = false;
-  els.detailSheet.hidden = false;
-}
-
-function closeDetail() {
-  state.detailId = "";
-  els.detailBackdrop.hidden = true;
-  els.detailSheet.hidden = true;
-}
-
-function renderDetail() {
-  const track = getDetailTrack();
-  if (!track) return;
-  els.detailTitle.textContent = track.title;
-  els.detailArtist.textContent = track.artist || "アーティスト未設定";
-  els.detailBasic.replaceChildren(
-    ...detailRows([
-      ["曲名", track.title],
-      ["アーティスト", track.artist],
-      ["生成日", track.displayDate],
-      ["カテゴリ", track.version],
-      ["ファイル名", track.fileName],
-    ])
-  );
-  els.detailVocal.replaceChildren(
-    ...detailRows([
-      ["memo", track.memo],
-      ["highest_note", track.highestNote],
-      ["key", track.key === "" ? "" : track.key],
-      ["karaoke_ready", track.karaokeReady ? "歌える" : "未確認"],
-      ["quality_score", starText(track.quality)],
-      ["retake_count", `${track.retake || 0}回`],
-    ])
-  );
-  els.detailMemo.textContent = track.memo || "メモはありません";
-  els.detailFavorite.textContent = state.favorites.has(track.id) ? "★ お気に入り" : "☆ お気に入り";
-  els.detailOpen.href = track.url || "#";
-  els.detailOpen.setAttribute("aria-disabled", track.url ? "false" : "true");
-
-  const list = filterTracks();
-  const index = list.findIndex((item) => item.id === track.id);
-  els.detailPrev.disabled = index <= 0;
-  els.detailNext.disabled = index === -1 || index >= list.length - 1;
-}
-
-function detailRows(rows) {
-  return rows.flatMap(([label, value]) => {
-    const dt = document.createElement("dt");
-    const dd = document.createElement("dd");
-    dt.textContent = label;
-    dd.textContent = value === undefined || value === null || value === "" ? "-" : value;
-    return [dt, dd];
-  });
+function toggleDetail(id) {
+  state.detailId = state.detailId === id ? "" : id;
+  render();
 }
 
 function moveDetail(direction) {
   const list = filterTracks();
   const index = list.findIndex((track) => track.id === state.detailId);
   const next = list[index + direction];
-  if (next) openDetail(next.id);
-}
-
-function getDetailTrack() {
-  return state.tracks.find((track) => track.id === state.detailId);
+  if (next) {
+    state.detailId = next.id;
+    render();
+  }
 }
 
 function pick(source, keys) {
@@ -454,15 +430,10 @@ function pick(source, keys) {
   return "";
 }
 
-function buildAudioUrl({ artist, title, version, fileName }) {
-  const name = fileName || [artist, title, version].filter(Boolean).join("_") + ".wav";
-  return name ? R2_BASE_URL + encodeURIComponent(name).replaceAll("%2F", "/") : "";
-}
-
 function normalizeTags(value) {
   if (Array.isArray(value)) return value.map(String).map((tag) => tag.trim()).filter(Boolean);
   return String(value || "")
-    .split(/[,\s、/]+/)
+    .split(/[,\s/]+/)
     .map((tag) => tag.trim())
     .filter(Boolean);
 }
@@ -520,13 +491,13 @@ function formatDate(value) {
 
 function starText(value) {
   const score = Math.max(0, Math.min(5, Number(value) || 0));
-  return score ? "★".repeat(score) + "☆".repeat(5 - score) : "未評価";
+  return score ? "★".repeat(score) + "☆".repeat(5 - score) : "\u672a\u8a55\u4fa1";
 }
 
 function parseBoolean(value) {
   if (value === true) return true;
   const text = String(value || "").toLowerCase().trim();
-  return ["true", "yes", "1", "ok", "可", "歌える"].includes(text);
+  return ["true", "yes", "1", "ok"].includes(text);
 }
 
 function scrollToTop() {
@@ -538,27 +509,15 @@ function demoTracks() {
     normalizeTrack({
       id: "demo-1",
       title: "Get Along Together",
-      artist: "山根康広",
+      artist: "Yasuhiro Yamane",
       category: "Mastering",
       quality_score: 4,
       karaoke_ready: true,
       retake_count: 0,
       highest_note: "mid2G#",
       last_updated: "2026-05-31",
-      memo: "いい感じに歌えたが、サビが一瞬高いので要注意",
-      url: "https://pub-3b279d63cf3f4efdb626192fa8e22ef2.r2.dev/山根康広_Get Along Together_Mastering-2.wav",
-    }),
-    normalizeTrack({
-      id: "demo-2",
-      title: "POP STAR",
-      artist: "平井堅",
-      category: "Mastering",
-      quality_score: 3,
-      retake_count: 1,
-      key: -2,
-      highest_note: "mid2G",
-      last_updated: "2026-05-27",
-      url: "https://pub-3b279d63cf3f4efdb626192fa8e22ef2.r2.dev/平井堅_POP STAR_Re_Mastering-5.wav",
+      memo: "Good take. The chorus gets high for a moment.",
+      url: "https://pub-3b279d63cf3f4efdb626192fa8e22ef2.r2.dev/demo.wav",
     }),
   ];
 }

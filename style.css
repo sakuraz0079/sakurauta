@@ -194,11 +194,19 @@ h1 {
   border-radius: 8px;
   background: rgba(255, 253, 248, 0.92);
   cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .track-card.active {
   border-color: rgba(18, 107, 90, 0.5);
   background: var(--soft);
+}
+
+.track-card.expanded {
+  grid-template-rows: auto auto;
+  border-color: rgba(18, 107, 90, 0.58);
+  background: #fffefa;
+  box-shadow: 0 12px 26px rgba(30, 38, 32, 0.1);
 }
 
 .play-button {
@@ -284,6 +292,79 @@ h1 {
   border-color: rgba(196, 86, 59, 0.45);
   background: #fbebe5;
   color: var(--accent-2);
+}
+
+.inline-detail {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 12px;
+  margin-top: 2px;
+  padding: 12px 2px 2px;
+  border-top: 1px solid var(--line);
+}
+
+.inline-memo {
+  margin: 0;
+  padding: 10px;
+  border-radius: 8px;
+  background: #f0ece3;
+  color: var(--ink);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.inline-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.inline-fact {
+  min-width: 0;
+  max-width: 100%;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #edf3ef;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.inline-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.inline-actions button,
+.inline-actions a {
+  display: grid;
+  place-items: center;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8f5ee;
+  color: var(--ink);
+  text-align: center;
+  text-decoration: none;
+}
+
+.inline-actions .primary-action {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.inline-actions a {
+  grid-column: 1 / -1;
+}
+
+.inline-actions a[aria-disabled="true"] {
+  opacity: 0.42;
+  pointer-events: none;
 }
 
 .empty {
@@ -505,7 +586,7 @@ audio {
   }
 
   .track-card {
-    min-height: 74px;
+    min-height: 86px;
   }
 
   .detail-sheet {
