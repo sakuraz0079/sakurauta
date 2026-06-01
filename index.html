@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#13201b">
     <title>Sakurauta</title>
     <link rel="manifest" href="./manifest.webmanifest">
-    <link rel="stylesheet" href="./style.css?v=20260601-11">
+    <link rel="stylesheet" href="./style.css?v=20260601-12">
   </head>
   <body>
     <div class="app-shell">
@@ -33,13 +33,15 @@
               </select>
             </label>
             <label class="select-wrap">
-              <span>表示</span>
+              <span>再生リスト</span>
               <select id="viewSelect">
-                <option value="all">すべて</option>
+                <option value="latest10">最新10曲</option>
                 <option value="favorites">お気に入り</option>
+                <option value="all">すべて</option>
                 <option value="recentlyPlayed">最近再生</option>
               </select>
             </label>
+            <button class="new-list-button" id="newPlaylistButton" type="button">＋</button>
           </div>
 
           <div class="chips" id="tagChips" aria-label="タグ"></div>
@@ -100,6 +102,6 @@
       </article>
     </template>
 
-    <script src="./app.js?v=20260601-11" type="module"></script>
+    <script src="./app.js?v=20260601-12" type="module"></script>
   </body>
 </html>

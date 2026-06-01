@@ -4,13 +4,14 @@ const FAVORITES_KEY = "utawav.favorites";
 const RECENT_KEY = "utawav.recent";
 const LAST_TRACK_KEY = "utawav.lastTrack";
 const SHUFFLE_KEY = "utawav.shuffle";
+const PLAYLISTS_KEY = "utawav.playlists";
 const PAGE_SIZE = 20;
 
 const state = {
   tracks: [],
   query: "",
   sort: "recent",
-  view: "all",
+  view: "latest10",
   tag: "",
   currentId: "",
   detailId: "",
@@ -21,6 +22,7 @@ const state = {
   page: 1,
   favorites: readSet(FAVORITES_KEY),
   recent: readArray(RECENT_KEY),
+  playlists: readPlaylists(),
 };
 
 const els = {
@@ -45,6 +47,7 @@ const els = {
   playerNext: document.querySelector("#playerNextButton"),
   shuffle: document.querySelector("#shuffleButton"),
   refresh: document.querySelector("#refreshButton"),
+  newPlaylist: document.querySelector("#newPlaylistButton"),
   prevPage: document.querySelector("#prevPageButton"),
   nextPage: document.querySelector("#nextPageButton"),
   page: document.querySelector("#pageLabel"),
@@ -54,6 +57,7 @@ init();
 
 async function init() {
   bindEvents();
+  renderPlaylistOptions();
   await loadTracks();
   restoreLastTrack();
   updatePlayerControls();
@@ -83,6 +87,7 @@ function bindEvents() {
   });
 
   els.refresh.addEventListener("click", () => loadTracks({ force: true }));
+  els.newPlaylist.addEventListener("click", createPlaylist);
   els.prevPage.addEventListener("click", () => {
     state.page = Math.max(1, state.page - 1);
     render();
@@ -296,6 +301,32 @@ function renderTags() {
   }
 }
 
+function renderPlaylistOptions() {
+  const current = state.view;
+  const fixed = [
+    ["latest10", "\u6700\u65b010\u66f2"],
+    ["favorites", "\u304a\u6c17\u306b\u5165\u308a"],
+    ["all", "\u3059\u3079\u3066"],
+    ["recentlyPlayed", "\u6700\u8fd1\u518d\u751f"],
+  ];
+  els.view.replaceChildren();
+  for (const [value, label] of fixed) {
+    els.view.append(new Option(label, value));
+  }
+  if (state.playlists.length) {
+    const group = document.createElement("optgroup");
+    group.label = "\u81ea\u5206\u306e\u30ea\u30b9\u30c8";
+    for (const playlist of state.playlists) {
+      group.append(new Option(playlist.name, playlist.id));
+    }
+    els.view.append(group);
+  }
+  els.view.value = [...fixed.map(([value]) => value), ...state.playlists.map((playlist) => playlist.id)].includes(current)
+    ? current
+    : "latest10";
+  state.view = els.view.value;
+}
+
 function makeChip(label, value) {
   const button = document.createElement("button");
   button.type = "button";
@@ -378,6 +409,17 @@ function renderInlineDetail(track) {
   const actions = document.createElement("div");
   actions.className = "inline-actions";
   actions.append(makeAction(state.favorites.has(track.id) ? "★ \u304a\u6c17\u306b\u5165\u308a" : "☆ \u304a\u6c17\u306b\u5165\u308a", () => toggleFavorite(track.id)));
+  if (state.playlists.length) {
+    const select = document.createElement("select");
+    select.setAttribute("aria-label", "\u8ffd\u52a0\u5148\u30ea\u30b9\u30c8");
+    for (const playlist of state.playlists) {
+      select.append(new Option(playlist.name, playlist.id));
+    }
+    actions.append(select);
+    actions.append(makeAction("\u30ea\u30b9\u30c8\u306b\u8ffd\u52a0", () => addTrackToPlaylist(track.id, select.value)));
+  } else {
+    actions.append(makeAction("\u30ea\u30b9\u30c8\u3092\u4f5c\u308b", createPlaylist));
+  }
   detail.append(actions);
 
   return detail;
@@ -410,8 +452,14 @@ function filterTracks() {
   let tracks = [...state.tracks];
   if (state.query) tracks = tracks.filter((track) => track.searchText.includes(state.query));
   if (state.tag) tracks = tracks.filter((track) => track.tags.includes(state.tag));
+  if (state.view === "latest10") tracks = latestTracks(tracks, 10);
   if (state.view === "favorites") tracks = tracks.filter((track) => state.favorites.has(track.id));
   if (state.view === "recentlyPlayed") tracks = tracks.filter((track) => state.recent.includes(track.id));
+  const playlist = state.playlists.find((item) => item.id === state.view);
+  if (playlist) {
+    const allowed = new Set(playlist.trackIds);
+    tracks = tracks.filter((track) => allowed.has(track.id));
+  }
 
   tracks.sort((a, b) => {
     if (state.sort === "title") return a.title.localeCompare(b.title, "ja");
@@ -422,9 +470,17 @@ function filterTracks() {
 
   if (state.view === "recentlyPlayed") {
     tracks.sort((a, b) => state.recent.indexOf(a.id) - state.recent.indexOf(b.id));
+  } else if (playlist) {
+    tracks.sort((a, b) => playlist.trackIds.indexOf(a.id) - playlist.trackIds.indexOf(b.id));
   }
 
   return tracks;
+}
+
+function latestTracks(tracks, limit) {
+  return [...tracks]
+    .sort((a, b) => dateValue(b.date) - dateValue(a.date) || a.title.localeCompare(b.title, "ja"))
+    .slice(0, limit);
 }
 
 function playTrack(track, { autoplay = true } = {}) {
@@ -525,6 +581,29 @@ function toggleFavorite(id) {
   render();
 }
 
+function createPlaylist() {
+  const name = prompt("\u65b0\u3057\u3044\u30ea\u30b9\u30c8\u540d");
+  if (!name?.trim()) return;
+  const playlist = {
+    id: `playlist-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    name: name.trim(),
+    trackIds: [],
+  };
+  state.playlists.push(playlist);
+  savePlaylists();
+  state.view = playlist.id;
+  renderPlaylistOptions();
+  render();
+}
+
+function addTrackToPlaylist(trackId, playlistId) {
+  const playlist = state.playlists.find((item) => item.id === playlistId);
+  if (!playlist) return;
+  if (!playlist.trackIds.includes(trackId)) playlist.trackIds.push(trackId);
+  savePlaylists();
+  render();
+}
+
 function toggleDetail(id) {
   state.detailId = state.detailId === id ? "" : id;
   render();
@@ -572,6 +651,22 @@ function readJson(key) {
   } catch {
     return null;
   }
+}
+
+function readPlaylists() {
+  const value = readJson(PLAYLISTS_KEY);
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((playlist) => playlist?.id && playlist?.name && Array.isArray(playlist.trackIds))
+    .map((playlist) => ({
+      id: String(playlist.id),
+      name: String(playlist.name),
+      trackIds: playlist.trackIds.map(String),
+    }));
+}
+
+function savePlaylists() {
+  localStorage.setItem(PLAYLISTS_KEY, JSON.stringify(state.playlists));
 }
 
 function slug(value) {
