@@ -560,6 +560,7 @@ function playTrack(track, { autoplay = true } = {}) {
   state.currentId = track.id;
   if (els.audio.src !== track.url) {
     els.audio.src = track.url;
+    els.audio.load();
     prepareWaveform(track);
   }
   updatePlayerInfo(track);
@@ -800,29 +801,28 @@ function fileNameFromUrl(value) {
   }
 }
 
-async function prepareWaveform(track) {
-  state.waveform = [];
-  drawWaveform();
-  if (!track?.url) return;
-  try {
-    const response = await fetch(track.url, { mode: "cors" });
-    if (!response.ok) throw new Error("wave fetch failed");
-    const buffer = await response.arrayBuffer();
-    const context = new AudioContext();
-    const audioBuffer = await context.decodeAudioData(buffer.slice(0));
-    const data = audioBuffer.getChannelData(0);
-    const samples = 96;
-    const blockSize = Math.floor(data.length / samples);
-    state.waveform = Array.from({ length: samples }, (_, index) => {
-      const start = index * blockSize;
-      let sum = 0;
-      for (let i = 0; i < blockSize; i += 1) sum += Math.abs(data[start + i] || 0);
-      return Math.min(1, (sum / blockSize) * 4);
-    });
-  } catch {
-    state.waveform = [];
-  }
+function prepareWaveform(track) {
+  state.waveform = makeLightweightWaveform(track);
   drawWaveform(progressRatio());
+}
+
+function makeLightweightWaveform(track) {
+  const seedText = [
+    track?.id,
+    track?.title,
+    track?.artist,
+    track?.version,
+    track?.fileName,
+  ].filter(Boolean).join("|") || "sak_Uta";
+  let seed = 0;
+  for (const char of seedText) seed = (seed * 31 + char.charCodeAt(0)) >>> 0;
+  return Array.from({ length: 96 }, (_, index) => {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    const random = seed / 4294967295;
+    const swell = Math.sin(index * 0.24) ** 2;
+    const pulse = Math.sin(index * 0.71 + random * 2) ** 2;
+    return 0.16 + random * 0.22 + swell * 0.24 + pulse * 0.12;
+  });
 }
 
 function drawWaveform(progress = progressRatio()) {
