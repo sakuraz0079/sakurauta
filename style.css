@@ -371,6 +371,15 @@ h1 {
   box-shadow: inset 4px 0 0 var(--accent);
 }
 
+.track-card.loading {
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+.track-card.error {
+  border-color: rgba(255, 96, 120, 0.74);
+  box-shadow: inset 4px 0 0 #ff6078;
+}
+
 .track-card.expanded {
   grid-template-rows: auto auto;
   border-color: rgba(239, 23, 68, 0.62);
@@ -443,6 +452,17 @@ h1 {
 .stat-pill.ready {
   background: rgba(239, 23, 68, 0.18);
   color: #ffb7c5;
+}
+
+.stat-pill.loading,
+.stat-pill.playing {
+  background: rgba(239, 23, 68, 0.22);
+  color: #fff;
+}
+
+.stat-pill.error {
+  background: rgba(255, 96, 120, 0.2);
+  color: #ff9bad;
 }
 
 .stat-pill.not-ready {

@@ -17,6 +17,8 @@ const state = {
   detailId: "",
   isPlaying: false,
   isSeeking: false,
+  playbackStatus: "idle",
+  playbackMessage: "",
   shuffle: localStorage.getItem(SHUFFLE_KEY) === "true",
   waveform: [],
   page: 1,
@@ -128,12 +130,26 @@ function bindEvents() {
     state.isSeeking = false;
   });
   els.audio.addEventListener("ended", () => playAdjacent(1, { autoplay: true }));
+  els.audio.addEventListener("loadstart", () => setPlaybackStatus("loading", "\u8aad\u307f\u8fbc\u307f\u4e2d"));
+  els.audio.addEventListener("waiting", () => setPlaybackStatus("loading", "\u8aad\u307f\u8fbc\u307f\u4e2d"));
+  els.audio.addEventListener("stalled", () => setPlaybackStatus("loading", "\u901a\u4fe1\u3092\u5f85\u3063\u3066\u3044\u307e\u3059"));
+  els.audio.addEventListener("canplay", () => {
+    if (state.playbackStatus === "loading") setPlaybackStatus("ready", "");
+  });
+  els.audio.addEventListener("playing", () => setPlaybackStatus("playing", ""));
   els.audio.addEventListener("play", () => {
     state.isPlaying = true;
     updatePlayerControls();
     render();
   });
   els.audio.addEventListener("pause", () => {
+    state.isPlaying = false;
+    if (state.playbackStatus !== "error") setPlaybackStatus("idle", "");
+    updatePlayerControls();
+    render();
+  });
+  els.audio.addEventListener("error", () => {
+    setPlaybackStatus("error", "\u518d\u751f\u3067\u304d\u307e\u305b\u3093\u3067\u3057\u305f");
     state.isPlaying = false;
     updatePlayerControls();
     render();
@@ -380,8 +396,11 @@ function makeChip(label, value) {
 function renderTrack(track) {
   const node = els.template.content.firstElementChild.cloneNode(true);
   const expanded = track.id === state.detailId;
+  const isCurrent = track.id === state.currentId;
   node.classList.toggle("active", track.id === state.currentId);
   node.classList.toggle("expanded", expanded);
+  node.classList.toggle("loading", isCurrent && state.playbackStatus === "loading");
+  node.classList.toggle("error", isCurrent && state.playbackStatus === "error");
   node.querySelector("h2").textContent = track.title;
   node.querySelector("p").textContent = track.artist || "\u30a2\u30fc\u30c6\u30a3\u30b9\u30c8\u672a\u8a2d\u5b9a";
 
@@ -390,6 +409,9 @@ function renderTrack(track) {
   stats.append(makeStat(track.displayDate || "-"));
   if (Number(track.retake) > 0) stats.append(makeStat(`Re ${track.retake}`));
   if (track.karaokeReady) stats.append(makeStat("\u6b4c\u3048\u308b", "ready"));
+  if (isCurrent && state.playbackStatus === "loading") stats.append(makeStat("\u8aad\u307f\u8fbc\u307f\u4e2d", "loading"));
+  if (isCurrent && state.playbackStatus === "playing") stats.append(makeStat("\u518d\u751f\u4e2d", "playing"));
+  if (isCurrent && state.playbackStatus === "error") stats.append(makeStat("\u518d\u751f\u30a8\u30e9\u30fc", "error"));
 
   const meta = node.querySelector(".track-meta");
   const metaItems = [track.version, ...track.genreTags].filter(Boolean);
@@ -558,6 +580,7 @@ function latestTracks(tracks, limit) {
 function playTrack(track, { autoplay = true } = {}) {
   if (!track.url) return;
   state.currentId = track.id;
+  setPlaybackStatus(autoplay ? "loading" : "ready", autoplay ? "\u8aad\u307f\u8fbc\u307f\u4e2d" : "");
   if (els.audio.src !== track.url) {
     els.audio.src = track.url;
     els.audio.load();
@@ -567,7 +590,13 @@ function playTrack(track, { autoplay = true } = {}) {
   localStorage.setItem(LAST_TRACK_KEY, track.id);
   state.recent = [track.id, ...state.recent.filter((id) => id !== track.id)].slice(0, 50);
   localStorage.setItem(RECENT_KEY, JSON.stringify(state.recent));
-  if (autoplay) els.audio.play().catch(() => {});
+  if (autoplay) {
+    els.audio.play().catch(() => {
+      setPlaybackStatus("error", "\u518d\u751f\u3092\u958b\u59cb\u3067\u304d\u307e\u305b\u3093\u3067\u3057\u305f");
+      updatePlayerControls();
+      render();
+    });
+  }
   render();
 }
 
@@ -598,7 +627,12 @@ function togglePlayback() {
     return;
   }
   if (els.audio.paused) {
-    els.audio.play().catch(() => {});
+    setPlaybackStatus("loading", "\u8aad\u307f\u8fbc\u307f\u4e2d");
+    els.audio.play().catch(() => {
+      setPlaybackStatus("error", "\u518d\u751f\u3092\u958b\u59cb\u3067\u304d\u307e\u305b\u3093\u3067\u3057\u305f");
+      updatePlayerControls();
+      render();
+    });
   } else {
     els.audio.pause();
   }
@@ -614,6 +648,7 @@ function restoreLastTrack() {
   if (track) {
     state.currentId = track.id;
     els.audio.src = track.url;
+    setPlaybackStatus("ready", "");
     updatePlayerInfo(track);
     prepareWaveform(track);
     render();
@@ -623,14 +658,29 @@ function restoreLastTrack() {
 function updatePlayerInfo(track) {
   els.nowTitle.textContent = track.title;
   els.nowArtist.textContent = [track.artist, track.version].filter(Boolean).join(" / ") || track.url;
+  updatePlayerMeta(track);
+}
+
+function updatePlayerMeta(track = getCurrentTrack()) {
+  if (!track) {
+    els.nowMeta.textContent = state.playbackMessage;
+    return;
+  }
   const meta = [starText(track.quality)];
   if (Number(track.retake) > 0) meta.push(`Re ${track.retake}`);
   if (track.karaokeReady) meta.push("\u6b4c\u3048\u308b");
+  if (state.playbackMessage) meta.unshift(state.playbackMessage);
   els.nowMeta.textContent = meta.filter(Boolean).join(" · ");
 }
 
+function setPlaybackStatus(status, message = "") {
+  state.playbackStatus = status;
+  state.playbackMessage = message;
+  updatePlayerMeta();
+}
+
 function updatePlayerControls() {
-  els.playerPlay.textContent = state.isPlaying ? "Ⅱ" : "▶";
+  els.playerPlay.textContent = state.playbackStatus === "loading" ? "…" : state.isPlaying ? "Ⅱ" : "▶";
   els.playerPlay.setAttribute("aria-label", state.isPlaying ? "\u4e00\u6642\u505c\u6b62" : "\u518d\u751f");
   els.shuffle.classList.toggle("active", state.shuffle);
 }
