@@ -4,6 +4,8 @@ const FAVORITES_KEY = "utawav.favorites";
 const RECENT_KEY = "utawav.recent";
 const LAST_TRACK_KEY = "utawav.lastTrack";
 const SHUFFLE_KEY = "utawav.shuffle";
+const REPEAT_KEY = "utawav.repeat";
+const PLAYER_COMPACT_KEY = "utawav.playerCompact";
 const PLAYLISTS_KEY = "utawav.playlists";
 const PAGE_SIZE = 20;
 
@@ -11,7 +13,7 @@ const state = {
   tracks: [],
   query: "",
   sort: "recent",
-  view: "latest10",
+  view: "all",
   tag: "",
   currentId: "",
   detailId: "",
@@ -20,6 +22,8 @@ const state = {
   playbackStatus: "idle",
   playbackMessage: "",
   shuffle: localStorage.getItem(SHUFFLE_KEY) === "true",
+  repeat: localStorage.getItem(REPEAT_KEY) === "true",
+  compactPlayer: localStorage.getItem(PLAYER_COMPACT_KEY) === "true",
   waveform: [],
   page: 1,
   favorites: readSet(FAVORITES_KEY),
@@ -28,6 +32,8 @@ const state = {
 };
 
 const els = {
+  appShell: document.querySelector(".app-shell"),
+  player: document.querySelector("#player"),
   search: document.querySelector("#searchInput"),
   sort: document.querySelector("#sortSelect"),
   view: document.querySelector("#viewSelect"),
@@ -40,6 +46,7 @@ const els = {
   nowTitle: document.querySelector("#nowTitle"),
   nowArtist: document.querySelector("#nowArtist"),
   nowMeta: document.querySelector("#nowMeta"),
+  playbackStatus: document.querySelector("#playbackStatus"),
   seek: document.querySelector("#seekRange"),
   waveCanvas: document.querySelector("#waveCanvas"),
   currentTime: document.querySelector("#currentTime"),
@@ -47,6 +54,8 @@ const els = {
   playerPrev: document.querySelector("#playerPrevButton"),
   playerPlay: document.querySelector("#playerPlayButton"),
   playerNext: document.querySelector("#playerNextButton"),
+  compactPlayer: document.querySelector("#compactPlayerButton"),
+  repeat: document.querySelector("#repeatButton"),
   shuffle: document.querySelector("#shuffleButton"),
   refresh: document.querySelector("#refreshButton"),
   newPlaylist: document.querySelector("#newPlaylistButton"),
@@ -66,6 +75,7 @@ async function init() {
   renderPlaylistOptions();
   await loadTracks();
   restoreLastTrack();
+  updatePlayerCompact();
   updatePlayerControls();
   drawWaveform();
   if ("serviceWorker" in navigator) {
@@ -113,6 +123,16 @@ function bindEvents() {
   els.playerPrev.addEventListener("click", () => playAdjacent(-1));
   els.playerNext.addEventListener("click", () => playAdjacent(1));
   els.playerPlay.addEventListener("click", togglePlayback);
+  els.compactPlayer.addEventListener("click", () => {
+    state.compactPlayer = !state.compactPlayer;
+    localStorage.setItem(PLAYER_COMPACT_KEY, String(state.compactPlayer));
+    updatePlayerCompact();
+  });
+  els.repeat.addEventListener("click", () => {
+    state.repeat = !state.repeat;
+    localStorage.setItem(REPEAT_KEY, String(state.repeat));
+    updatePlayerControls();
+  });
   els.shuffle.addEventListener("click", () => {
     state.shuffle = !state.shuffle;
     localStorage.setItem(SHUFFLE_KEY, String(state.shuffle));
@@ -129,7 +149,14 @@ function bindEvents() {
     }
     state.isSeeking = false;
   });
-  els.audio.addEventListener("ended", () => playAdjacent(1, { autoplay: true }));
+  els.audio.addEventListener("ended", () => {
+    if (state.repeat) {
+      els.audio.currentTime = 0;
+      els.audio.play().catch(() => {});
+    } else {
+      playAdjacent(1, { autoplay: true });
+    }
+  });
   els.audio.addEventListener("loadstart", () => setPlaybackStatus("loading", "\u8aad\u307f\u8fbc\u307f\u4e2d"));
   els.audio.addEventListener("waiting", () => setPlaybackStatus("loading", "\u8aad\u307f\u8fbc\u307f\u4e2d"));
   els.audio.addEventListener("stalled", () => setPlaybackStatus("loading", "\u901a\u4fe1\u3092\u5f85\u3063\u3066\u3044\u307e\u3059"));
@@ -349,7 +376,7 @@ function renderPlaylistOptions() {
   }
   els.view.value = [...fixed.map(([value]) => value), ...state.playlists.map((playlist) => playlist.id)].includes(current)
     ? current
-    : "latest10";
+    : "all";
   state.view = els.view.value;
   els.deletePlaylist.hidden = !state.playlists.some((playlist) => playlist.id === state.view);
   renderPlaylistChips(fixed);
@@ -399,8 +426,6 @@ function renderTrack(track) {
   const isCurrent = track.id === state.currentId;
   node.classList.toggle("active", track.id === state.currentId);
   node.classList.toggle("expanded", expanded);
-  node.classList.toggle("loading", isCurrent && state.playbackStatus === "loading");
-  node.classList.toggle("error", isCurrent && state.playbackStatus === "error");
   node.querySelector("h2").textContent = track.title;
   node.querySelector("p").textContent = track.artist || "\u30a2\u30fc\u30c6\u30a3\u30b9\u30c8\u672a\u8a2d\u5b9a";
 
@@ -409,9 +434,6 @@ function renderTrack(track) {
   stats.append(makeStat(track.displayDate || "-"));
   if (Number(track.retake) > 0) stats.append(makeStat(`Re ${track.retake}`));
   if (track.karaokeReady) stats.append(makeStat("\u6b4c\u3048\u308b", "ready"));
-  if (isCurrent && state.playbackStatus === "loading") stats.append(makeStat("\u8aad\u307f\u8fbc\u307f\u4e2d", "loading"));
-  if (isCurrent && state.playbackStatus === "playing") stats.append(makeStat("\u518d\u751f\u4e2d", "playing"));
-  if (isCurrent && state.playbackStatus === "error") stats.append(makeStat("\u518d\u751f\u30a8\u30e9\u30fc", "error"));
 
   const meta = node.querySelector(".track-meta");
   const metaItems = [track.version, ...track.genreTags].filter(Boolean);
@@ -669,7 +691,6 @@ function updatePlayerMeta(track = getCurrentTrack()) {
   const meta = [starText(track.quality)];
   if (Number(track.retake) > 0) meta.push(`Re ${track.retake}`);
   if (track.karaokeReady) meta.push("\u6b4c\u3048\u308b");
-  if (state.playbackMessage) meta.unshift(state.playbackMessage);
   els.nowMeta.textContent = meta.filter(Boolean).join(" · ");
 }
 
@@ -677,12 +698,38 @@ function setPlaybackStatus(status, message = "") {
   state.playbackStatus = status;
   state.playbackMessage = message;
   updatePlayerMeta();
+  updatePlaybackStatusDisplay();
+}
+
+function updatePlaybackStatusDisplay() {
+  if (!els.playbackStatus) return;
+  const labels = {
+    loading: state.playbackMessage || "\u8aad\u307f\u8fbc\u307f\u4e2d",
+    playing: "\u518d\u751f\u4e2d",
+    error: state.playbackMessage || "\u518d\u751f\u30a8\u30e9\u30fc",
+  };
+  const label = labels[state.playbackStatus] || "";
+  els.playbackStatus.textContent = label || "\u00a0";
+  els.playbackStatus.classList.toggle("is-empty", !label);
+  els.playbackStatus.setAttribute("aria-hidden", label ? "false" : "true");
+  els.playbackStatus.dataset.status = state.playbackStatus;
 }
 
 function updatePlayerControls() {
-  els.playerPlay.textContent = state.playbackStatus === "loading" ? "…" : state.isPlaying ? "Ⅱ" : "▶";
-  els.playerPlay.setAttribute("aria-label", state.isPlaying ? "\u4e00\u6642\u505c\u6b62" : "\u518d\u751f");
+  const isPaused = els.audio.paused || !state.isPlaying;
+  els.playerPlay.textContent = "";
+  els.playerPlay.classList.toggle("is-playing", !isPaused);
+  els.playerPlay.setAttribute("aria-label", isPaused ? "\u518d\u751f" : "\u4e00\u6642\u505c\u6b62");
+  els.repeat.classList.toggle("active", state.repeat);
   els.shuffle.classList.toggle("active", state.shuffle);
+}
+
+function updatePlayerCompact() {
+  els.player.classList.toggle("compact", state.compactPlayer);
+  els.appShell.classList.toggle("player-compact", state.compactPlayer);
+  els.compactPlayer.setAttribute("aria-pressed", String(state.compactPlayer));
+  els.compactPlayer.setAttribute("aria-label", state.compactPlayer ? "\u518d\u751f\u30a8\u30ea\u30a2\u3092\u5927\u304d\u304f\u3059\u308b" : "\u518d\u751f\u30a8\u30ea\u30a2\u3092\u5c0f\u3055\u304f\u3059\u308b");
+  els.compactPlayer.setAttribute("title", state.compactPlayer ? "\u518d\u751f\u30a8\u30ea\u30a2\u3092\u5927\u304d\u304f\u3059\u308b" : "\u518d\u751f\u30a8\u30ea\u30a2\u3092\u5c0f\u3055\u304f\u3059\u308b");
 }
 
 function updateProgress() {

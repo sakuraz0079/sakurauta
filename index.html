@@ -11,7 +11,7 @@
     <link rel="icon" href="./icon-192.png" type="image/png">
     <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
     <link rel="manifest" href="./manifest.webmanifest">
-    <link rel="stylesheet" href="./style.css?v=20260602-01">
+    <link rel="stylesheet" href="./style.css?v=20260602-07">
   </head>
   <body>
     <div class="app-shell">
@@ -80,10 +80,12 @@
 
     <aside class="player" id="player" aria-label="プレイヤー">
       <div class="player-inner">
+        <button id="compactPlayerButton" class="compact-player-button" type="button" aria-label="再生エリアを小さくする" title="再生エリアを小さくする"></button>
         <div class="now-playing">
           <p id="nowTitle">曲を選択</p>
           <span id="nowArtist">一覧から再生できます</span>
           <small id="nowMeta"></small>
+          <strong id="playbackStatus" class="playback-status is-empty" aria-hidden="true">&nbsp;</strong>
         </div>
 
         <div class="wave-wrap" id="waveWrap">
@@ -96,8 +98,9 @@
         </div>
 
         <div class="player-controls">
+          <button id="repeatButton" type="button" aria-label="リピート" title="リピート">↻</button>
           <button id="playerPrevButton" type="button" aria-label="前の曲" title="前の曲">‹</button>
-          <button id="playerPlayButton" class="main-play" type="button" aria-label="再生" title="再生">▶</button>
+          <button id="playerPlayButton" class="main-play" type="button" aria-label="再生" title="再生"></button>
           <button id="playerNextButton" type="button" aria-label="次の曲" title="次の曲">›</button>
           <button id="shuffleButton" type="button" aria-label="シャッフル" title="シャッフル">⤨</button>
         </div>
@@ -118,6 +121,6 @@
       </article>
     </template>
 
-    <script src="./app.js?v=20260602-01" type="module"></script>
+    <script src="./app.js?v=20260602-07" type="module"></script>
   </body>
 </html>

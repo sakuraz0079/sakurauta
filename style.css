@@ -38,7 +38,11 @@ select {
   width: auto;
   max-width: none;
   margin: 0 16px;
-  padding: max(14px, env(safe-area-inset-top)) 0 238px;
+  padding: max(14px, env(safe-area-inset-top)) 0 292px;
+}
+
+.app-shell.player-compact {
+  padding-bottom: 158px;
 }
 
 .topbar {
@@ -371,15 +375,6 @@ h1 {
   box-shadow: inset 4px 0 0 var(--accent);
 }
 
-.track-card.loading {
-  border-color: rgba(255, 255, 255, 0.24);
-}
-
-.track-card.error {
-  border-color: rgba(255, 96, 120, 0.74);
-  box-shadow: inset 4px 0 0 #ff6078;
-}
-
 .track-card.expanded {
   grid-template-rows: auto auto;
   border-color: rgba(239, 23, 68, 0.62);
@@ -452,17 +447,6 @@ h1 {
 .stat-pill.ready {
   background: rgba(239, 23, 68, 0.18);
   color: #ffb7c5;
-}
-
-.stat-pill.loading,
-.stat-pill.playing {
-  background: rgba(239, 23, 68, 0.22);
-  color: #fff;
-}
-
-.stat-pill.error {
-  background: rgba(255, 96, 120, 0.2);
-  color: #ff9bad;
 }
 
 .stat-pill.not-ready {
@@ -627,21 +611,70 @@ h1 {
   right: 0;
   bottom: 0;
   left: 0;
-  padding: 10px 14px max(12px, env(safe-area-inset-bottom));
+  padding: 14px 16px max(16px, env(safe-area-inset-bottom));
   border-top: 1px solid var(--line);
-  background: rgba(8, 8, 9, 0.96);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 -12px 30px rgba(0, 0, 0, 0.48);
+  background:
+    radial-gradient(circle at 50% 0, rgba(239, 23, 68, 0.16), transparent 220px),
+    rgba(8, 8, 9, 0.98);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 -16px 38px rgba(0, 0, 0, 0.58);
   z-index: 20;
 }
 
 .player-inner {
+  position: relative;
   width: min(100%, 760px);
   margin: 0 auto;
 }
 
+.compact-player-button {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.compact-player-button::before,
+.compact-player-button::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.compact-player-button::before {
+  transform: translateY(-3px) rotate(18deg);
+}
+
+.compact-player-button::after {
+  transform: translateY(3px) rotate(-18deg);
+}
+
+.player.compact .compact-player-button::before {
+  transform: translateY(-3px) rotate(-18deg);
+}
+
+.player.compact .compact-player-button::after {
+  transform: translateY(3px) rotate(18deg);
+}
+
 .now-playing {
-  margin: 0 0 8px;
+  display: grid;
+  gap: 3px;
+  margin: 0 0 10px;
+  min-height: 82px;
+  justify-items: center;
+  text-align: center;
 }
 
 .now-playing p,
@@ -655,6 +688,7 @@ h1 {
 }
 
 .now-playing p {
+  font-size: 1.05rem;
   font-weight: 800;
 }
 
@@ -670,16 +704,45 @@ h1 {
   font-weight: 800;
 }
 
+.playback-status {
+  display: inline-grid;
+  place-items: center;
+  width: fit-content;
+  min-height: 32px;
+  margin-top: 5px;
+  padding: 0 12px;
+  border: 1px solid rgba(239, 23, 68, 0.65);
+  border-radius: 999px;
+  background: linear-gradient(145deg, rgba(239, 23, 68, 0.95), rgba(141, 9, 34, 0.95));
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 900;
+  box-shadow: 0 8px 20px rgba(239, 23, 68, 0.24);
+}
+
+.playback-status.is-empty {
+  visibility: hidden;
+}
+
+.playback-status[data-status="error"] {
+  border-color: rgba(255, 96, 120, 0.72);
+  background: rgba(255, 96, 120, 0.18);
+  color: #ffb7c5;
+  box-shadow: none;
+}
+
 audio {
   display: none;
 }
 
 .wave-wrap {
   position: relative;
-  height: 48px;
+  height: 58px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #0e0e10;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent),
+    #0e0e10;
   overflow: hidden;
 }
 
@@ -702,7 +765,7 @@ audio {
 .time-row {
   display: flex;
   justify-content: space-between;
-  margin-top: 4px;
+  margin-top: 6px;
   color: var(--muted);
   font-size: 0.72rem;
   font-variant-numeric: tabular-nums;
@@ -710,38 +773,117 @@ audio {
 
 .player-controls {
   display: grid;
-  grid-template-columns: 42px 52px 42px 42px;
+  grid-template-columns: 48px 48px 68px 48px 48px;
   justify-content: center;
-  gap: 10px;
-  margin-top: 8px;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .player-controls button {
   display: grid;
   place-items: center;
-  height: 42px;
+  height: 48px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel-2);
   color: var(--ink);
   cursor: pointer;
+  font-size: 1.18rem;
+  font-weight: 900;
 }
 
 .player-controls .main-play {
-  height: 48px;
-  margin-top: -3px;
+  position: relative;
+  height: 62px;
+  border-radius: 12px;
   border-color: rgba(255, 255, 255, 0.24);
   background:
     radial-gradient(circle at 34% 26%, rgba(255, 255, 255, 0.34), transparent 30%),
     linear-gradient(145deg, #ef1744, #8d0922);
   color: #fff;
-  box-shadow: 0 9px 20px rgba(239, 23, 68, 0.28);
+  font-size: 1.45rem;
+  box-shadow: 0 12px 30px rgba(239, 23, 68, 0.38);
+}
+
+.player-controls .main-play::before,
+.player-controls .main-play::after {
+  content: "";
+  display: block;
+}
+
+.player-controls .main-play::before {
+  width: 0;
+  height: 0;
+  margin-left: 4px;
+  border-top: 11px solid transparent;
+  border-bottom: 11px solid transparent;
+  border-left: 16px solid currentColor;
+}
+
+.player-controls .main-play::after {
+  display: none;
+}
+
+.player-controls .main-play.is-playing {
+  grid-template-columns: 8px 8px;
+  justify-content: center;
+  column-gap: 6px;
+}
+
+.player-controls .main-play.is-playing::before,
+.player-controls .main-play.is-playing::after {
+  display: block;
+  width: 8px;
+  height: 22px;
+  margin: 0;
+  border: 0;
+  border-radius: 2px;
+  background: currentColor;
 }
 
 .player-controls button.active {
   border-color: var(--accent);
   background: var(--accent);
   color: #fff;
+}
+
+.player.compact {
+  padding-top: 10px;
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
+}
+
+.player.compact .now-playing {
+  min-height: 0;
+  margin-bottom: 8px;
+  padding-right: 44px;
+}
+
+.player.compact .now-playing span,
+.player.compact .now-playing small,
+.player.compact .playback-status,
+.player.compact .wave-wrap,
+.player.compact .time-row {
+  display: none;
+}
+
+.player.compact .now-playing p {
+  max-width: min(100%, 520px);
+  font-size: 0.96rem;
+}
+
+.player.compact .player-controls {
+  grid-template-columns: 42px 42px 56px 42px 42px;
+  margin-top: 0;
+}
+
+.player.compact .player-controls button {
+  height: 40px;
+  font-size: 1.02rem;
+}
+
+.player.compact .player-controls .main-play {
+  height: 48px;
 }
 
 .sheet-backdrop {
