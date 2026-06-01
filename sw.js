@@ -1,9 +1,9 @@
-const CACHE_NAME = "utawav-app-v12";
+const CACHE_NAME = "utawav-app-v13";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./style.css?v=20260601-12",
-  "./app.js?v=20260601-12",
+  "./style.css?v=20260601-13",
+  "./app.js?v=20260601-13",
   "./manifest.webmanifest",
   "./icon.svg"
 ];

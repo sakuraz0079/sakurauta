@@ -160,6 +160,33 @@ h1 {
   font-weight: 900;
 }
 
+.playlist-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72px;
+  gap: 8px;
+}
+
+.playlist-form input,
+.playlist-form button {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+}
+
+.playlist-form input {
+  min-width: 0;
+  padding: 0 12px;
+  outline: 0;
+}
+
+.playlist-form button {
+  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
 .chips {
   display: flex;
   gap: 8px;

@@ -48,6 +48,8 @@ const els = {
   shuffle: document.querySelector("#shuffleButton"),
   refresh: document.querySelector("#refreshButton"),
   newPlaylist: document.querySelector("#newPlaylistButton"),
+  playlistForm: document.querySelector("#playlistForm"),
+  playlistName: document.querySelector("#playlistNameInput"),
   prevPage: document.querySelector("#prevPageButton"),
   nextPage: document.querySelector("#nextPageButton"),
   page: document.querySelector("#pageLabel"),
@@ -87,7 +89,11 @@ function bindEvents() {
   });
 
   els.refresh.addEventListener("click", () => loadTracks({ force: true }));
-  els.newPlaylist.addEventListener("click", createPlaylist);
+  els.newPlaylist.addEventListener("click", showPlaylistForm);
+  els.playlistForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    createPlaylist(els.playlistName.value);
+  });
   els.prevPage.addEventListener("click", () => {
     state.page = Math.max(1, state.page - 1);
     render();
@@ -418,7 +424,7 @@ function renderInlineDetail(track) {
     actions.append(select);
     actions.append(makeAction("\u30ea\u30b9\u30c8\u306b\u8ffd\u52a0", () => addTrackToPlaylist(track.id, select.value)));
   } else {
-    actions.append(makeAction("\u30ea\u30b9\u30c8\u3092\u4f5c\u308b", createPlaylist));
+    actions.append(makeAction("\u30ea\u30b9\u30c8\u3092\u4f5c\u308b", showPlaylistForm));
   }
   detail.append(actions);
 
@@ -581,8 +587,12 @@ function toggleFavorite(id) {
   render();
 }
 
-function createPlaylist() {
-  const name = prompt("\u65b0\u3057\u3044\u30ea\u30b9\u30c8\u540d");
+function showPlaylistForm() {
+  els.playlistForm.hidden = false;
+  els.playlistName.focus();
+}
+
+function createPlaylist(name) {
   if (!name?.trim()) return;
   const playlist = {
     id: `playlist-${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -593,6 +603,8 @@ function createPlaylist() {
   savePlaylists();
   state.view = playlist.id;
   renderPlaylistOptions();
+  els.playlistName.value = "";
+  els.playlistForm.hidden = true;
   render();
 }
 
@@ -601,6 +613,8 @@ function addTrackToPlaylist(trackId, playlistId) {
   if (!playlist) return;
   if (!playlist.trackIds.includes(trackId)) playlist.trackIds.push(trackId);
   savePlaylists();
+  state.view = playlist.id;
+  renderPlaylistOptions();
   render();
 }
 

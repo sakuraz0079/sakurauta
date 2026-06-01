@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#13201b">
     <title>Sakurauta</title>
     <link rel="manifest" href="./manifest.webmanifest">
-    <link rel="stylesheet" href="./style.css?v=20260601-12">
+    <link rel="stylesheet" href="./style.css?v=20260601-13">
   </head>
   <body>
     <div class="app-shell">
@@ -43,6 +43,11 @@
             </label>
             <button class="new-list-button" id="newPlaylistButton" type="button">＋</button>
           </div>
+
+          <form class="playlist-form" id="playlistForm" hidden>
+            <input id="playlistNameInput" type="text" autocomplete="off" placeholder="新しいリスト名">
+            <button type="submit">作成</button>
+          </form>
 
           <div class="chips" id="tagChips" aria-label="タグ"></div>
         </section>
@@ -102,6 +107,6 @@
       </article>
     </template>
 
-    <script src="./app.js?v=20260601-12" type="module"></script>
+    <script src="./app.js?v=20260601-13" type="module"></script>
   </body>
 </html>
