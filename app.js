@@ -2,6 +2,8 @@ const API_URL = "https://script.google.com/macros/s/AKfycbz2PjeyxX01bEjnGa0nkliI
 const CACHE_KEY = "utawav.tracks";
 const FAVORITES_KEY = "utawav.favorites";
 const RECENT_KEY = "utawav.recent";
+const LAST_TRACK_KEY = "utawav.lastTrack";
+const SHUFFLE_KEY = "utawav.shuffle";
 const PAGE_SIZE = 20;
 
 const state = {
@@ -12,6 +14,10 @@ const state = {
   tag: "",
   currentId: "",
   detailId: "",
+  isPlaying: false,
+  isSeeking: false,
+  shuffle: localStorage.getItem(SHUFFLE_KEY) === "true",
+  waveform: [],
   page: 1,
   favorites: readSet(FAVORITES_KEY),
   recent: readArray(RECENT_KEY),
@@ -29,6 +35,15 @@ const els = {
   audio: document.querySelector("#audio"),
   nowTitle: document.querySelector("#nowTitle"),
   nowArtist: document.querySelector("#nowArtist"),
+  nowMeta: document.querySelector("#nowMeta"),
+  seek: document.querySelector("#seekRange"),
+  waveCanvas: document.querySelector("#waveCanvas"),
+  currentTime: document.querySelector("#currentTime"),
+  durationTime: document.querySelector("#durationTime"),
+  playerPrev: document.querySelector("#playerPrevButton"),
+  playerPlay: document.querySelector("#playerPlayButton"),
+  playerNext: document.querySelector("#playerNextButton"),
+  shuffle: document.querySelector("#shuffleButton"),
   refresh: document.querySelector("#refreshButton"),
   prevPage: document.querySelector("#prevPageButton"),
   nextPage: document.querySelector("#nextPageButton"),
@@ -40,6 +55,9 @@ init();
 async function init() {
   bindEvents();
   await loadTracks();
+  restoreLastTrack();
+  updatePlayerControls();
+  drawWaveform();
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("./sw.js").catch(() => {});
   }
@@ -75,7 +93,38 @@ function bindEvents() {
     render();
     scrollToTop();
   });
-  els.audio.addEventListener("ended", playNext);
+  els.playerPrev.addEventListener("click", () => playAdjacent(-1));
+  els.playerNext.addEventListener("click", () => playAdjacent(1));
+  els.playerPlay.addEventListener("click", togglePlayback);
+  els.shuffle.addEventListener("click", () => {
+    state.shuffle = !state.shuffle;
+    localStorage.setItem(SHUFFLE_KEY, String(state.shuffle));
+    updatePlayerControls();
+  });
+  els.seek.addEventListener("input", () => {
+    state.isSeeking = true;
+    drawWaveform(Number(els.seek.value) / Number(els.seek.max || 1000));
+  });
+  els.seek.addEventListener("change", () => {
+    const duration = els.audio.duration;
+    if (Number.isFinite(duration)) {
+      els.audio.currentTime = duration * (Number(els.seek.value) / Number(els.seek.max || 1000));
+    }
+    state.isSeeking = false;
+  });
+  els.audio.addEventListener("ended", () => playAdjacent(1, { autoplay: true }));
+  els.audio.addEventListener("play", () => {
+    state.isPlaying = true;
+    updatePlayerControls();
+    render();
+  });
+  els.audio.addEventListener("pause", () => {
+    state.isPlaying = false;
+    updatePlayerControls();
+    render();
+  });
+  els.audio.addEventListener("loadedmetadata", updateProgress);
+  els.audio.addEventListener("timeupdate", updateProgress);
 }
 
 async function loadTracks({ force = false } = {}) {
@@ -285,9 +334,14 @@ function renderTrack(track) {
 
   const play = node.querySelector(".play-button");
   const favorite = node.querySelector(".favorite-button");
+  play.textContent = track.id === state.currentId && state.isPlaying ? "Ⅱ" : "▶";
   play.addEventListener("click", (event) => {
     event.stopPropagation();
-    playTrack(track);
+    if (track.id === state.currentId && state.isPlaying) {
+      els.audio.pause();
+    } else {
+      playTrack(track);
+    }
   });
   favorite.classList.toggle("active", state.favorites.has(track.id));
   favorite.textContent = state.favorites.has(track.id) ? "★" : "☆";
@@ -373,23 +427,95 @@ function filterTracks() {
   return tracks;
 }
 
-function playTrack(track) {
+function playTrack(track, { autoplay = true } = {}) {
   if (!track.url) return;
   state.currentId = track.id;
-  els.audio.src = track.url;
-  els.audio.play().catch(() => {});
-  els.nowTitle.textContent = track.title;
-  els.nowArtist.textContent = [track.artist, track.category].filter(Boolean).join(" / ") || track.url;
+  if (els.audio.src !== track.url) {
+    els.audio.src = track.url;
+    prepareWaveform(track);
+  }
+  updatePlayerInfo(track);
+  localStorage.setItem(LAST_TRACK_KEY, track.id);
   state.recent = [track.id, ...state.recent.filter((id) => id !== track.id)].slice(0, 50);
   localStorage.setItem(RECENT_KEY, JSON.stringify(state.recent));
+  if (autoplay) els.audio.play().catch(() => {});
   render();
 }
 
 function playNext() {
-  const tracks = filterTracks();
-  const index = tracks.findIndex((track) => track.id === state.currentId);
-  const next = tracks[index + 1];
-  if (next) playTrack(next);
+  playAdjacent(1, { autoplay: true });
+}
+
+function playAdjacent(direction, { autoplay = true } = {}) {
+  const list = filterTracks();
+  if (!list.length) return;
+  const currentIndex = list.findIndex((track) => track.id === state.currentId);
+  let next;
+  if (state.shuffle && list.length > 1) {
+    const candidates = list.filter((track) => track.id !== state.currentId);
+    next = candidates[Math.floor(Math.random() * candidates.length)];
+  } else {
+    const base = currentIndex === -1 ? 0 : currentIndex;
+    next = list[base + direction];
+  }
+  if (next) playTrack(next, { autoplay });
+}
+
+function togglePlayback() {
+  const current = getCurrentTrack();
+  if (!current) {
+    const first = filterTracks()[0];
+    if (first) playTrack(first);
+    return;
+  }
+  if (els.audio.paused) {
+    els.audio.play().catch(() => {});
+  } else {
+    els.audio.pause();
+  }
+}
+
+function getCurrentTrack() {
+  return state.tracks.find((track) => track.id === state.currentId);
+}
+
+function restoreLastTrack() {
+  const id = localStorage.getItem(LAST_TRACK_KEY);
+  const track = state.tracks.find((item) => item.id === id);
+  if (track) {
+    state.currentId = track.id;
+    els.audio.src = track.url;
+    updatePlayerInfo(track);
+    prepareWaveform(track);
+    render();
+  }
+}
+
+function updatePlayerInfo(track) {
+  els.nowTitle.textContent = track.title;
+  els.nowArtist.textContent = [track.artist, track.version].filter(Boolean).join(" / ") || track.url;
+  const meta = [starText(track.quality)];
+  if (Number(track.retake) > 0) meta.push(`Re ${track.retake}`);
+  if (track.karaokeReady) meta.push("\u6b4c\u3048\u308b");
+  els.nowMeta.textContent = meta.filter(Boolean).join(" · ");
+}
+
+function updatePlayerControls() {
+  els.playerPlay.textContent = state.isPlaying ? "Ⅱ" : "▶";
+  els.playerPlay.setAttribute("aria-label", state.isPlaying ? "\u4e00\u6642\u505c\u6b62" : "\u518d\u751f");
+  els.shuffle.classList.toggle("active", state.shuffle);
+}
+
+function updateProgress() {
+  const duration = els.audio.duration;
+  const current = els.audio.currentTime;
+  els.currentTime.textContent = formatClock(current);
+  els.durationTime.textContent = Number.isFinite(duration) ? formatClock(duration) : "0:00";
+  if (!state.isSeeking && Number.isFinite(duration) && duration > 0) {
+    const progress = current / duration;
+    els.seek.value = Math.round(progress * Number(els.seek.max || 1000));
+    drawWaveform(progress);
+  }
 }
 
 function toggleFavorite(id) {
@@ -467,6 +593,61 @@ function fileNameFromUrl(value) {
   }
 }
 
+async function prepareWaveform(track) {
+  state.waveform = [];
+  drawWaveform();
+  if (!track?.url) return;
+  try {
+    const response = await fetch(track.url, { mode: "cors" });
+    if (!response.ok) throw new Error("wave fetch failed");
+    const buffer = await response.arrayBuffer();
+    const context = new AudioContext();
+    const audioBuffer = await context.decodeAudioData(buffer.slice(0));
+    const data = audioBuffer.getChannelData(0);
+    const samples = 96;
+    const blockSize = Math.floor(data.length / samples);
+    state.waveform = Array.from({ length: samples }, (_, index) => {
+      const start = index * blockSize;
+      let sum = 0;
+      for (let i = 0; i < blockSize; i += 1) sum += Math.abs(data[start + i] || 0);
+      return Math.min(1, (sum / blockSize) * 4);
+    });
+  } catch {
+    state.waveform = [];
+  }
+  drawWaveform(progressRatio());
+}
+
+function drawWaveform(progress = progressRatio()) {
+  const canvas = els.waveCanvas;
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const width = canvas.width;
+  const height = canvas.height;
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = "#f1eee7";
+  ctx.fillRect(0, 0, width, height);
+
+  const bars = state.waveform.length ? state.waveform : Array.from({ length: 72 }, (_, index) => 0.18 + 0.22 * Math.sin(index * 0.65) ** 2);
+  const gap = 2;
+  const barWidth = Math.max(2, (width - gap * (bars.length - 1)) / bars.length);
+  const activeX = width * Math.max(0, Math.min(1, progress || 0));
+
+  bars.forEach((value, index) => {
+    const x = index * (barWidth + gap);
+    const barHeight = Math.max(4, value * (height - 10));
+    const y = (height - barHeight) / 2;
+    ctx.fillStyle = x <= activeX ? "#126b5a" : "#c9c2b6";
+    ctx.fillRect(x, y, barWidth, barHeight);
+  });
+}
+
+function progressRatio() {
+  const duration = els.audio.duration;
+  if (!Number.isFinite(duration) || duration <= 0) return 0;
+  return els.audio.currentTime / duration;
+}
+
 function versionFromFileName(value) {
   const name = stripExtension(fileNameFromUrl(value) || value);
   const match = name.match(/(?:^|_)(Re_)?(Mastering-\d+|Master-\d+|Mix-\d+)$/i);
@@ -481,6 +662,13 @@ function dateValue(value) {
 
 function formatTime(date) {
   return date.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatClock(value) {
+  if (!Number.isFinite(value)) return "0:00";
+  const minutes = Math.floor(value / 60);
+  const seconds = Math.floor(value % 60).toString().padStart(2, "0");
+  return `${minutes}:${seconds}`;
 }
 
 function formatDate(value) {

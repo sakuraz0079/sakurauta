@@ -4,17 +4,14 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#13201b">
-    <title>Utattemita Library</title>
+    <title>Sakurauta</title>
     <link rel="manifest" href="./manifest.webmanifest">
-    <link rel="stylesheet" href="./style.css?v=20260601-10">
+    <link rel="stylesheet" href="./style.css?v=20260601-11">
   </head>
   <body>
     <div class="app-shell">
-      <header class="topbar">
-        <div>
-          <p class="eyebrow">WAV Collection</p>
-          <h1>歌ってみた</h1>
-        </div>
+      <header class="topbar compact">
+        <p class="eyebrow">WAV Collection</p>
         <button class="icon-button" id="refreshButton" type="button" aria-label="更新" title="更新">↻</button>
       </header>
 
@@ -64,44 +61,31 @@
     </div>
 
     <aside class="player" id="player" aria-label="プレイヤー">
-      <div class="now-playing">
-        <p id="nowTitle">曲を選択</p>
-        <span id="nowArtist">一覧から再生できます</span>
-      </div>
-      <audio id="audio" controls preload="none"></audio>
-    </aside>
-
-    <div class="sheet-backdrop" id="detailBackdrop" hidden></div>
-    <section class="detail-sheet" id="detailSheet" aria-label="曲詳細" aria-modal="true" role="dialog" hidden>
-      <div class="sheet-handle"></div>
-      <header class="detail-header">
-        <div>
-          <p id="detailArtist"></p>
-          <h2 id="detailTitle"></h2>
+      <div class="player-inner">
+        <div class="now-playing">
+          <p id="nowTitle">曲を選択</p>
+          <span id="nowArtist">一覧から再生できます</span>
+          <small id="nowMeta"></small>
         </div>
-        <button class="icon-button" id="closeDetailButton" type="button" aria-label="閉じる" title="閉じる">×</button>
-      </header>
 
-      <div class="detail-actions">
-        <button id="detailPlayButton" type="button">▶ 再生</button>
-        <button id="detailFavoriteButton" type="button">☆ お気に入り</button>
-        <button id="detailPrevButton" type="button">前の曲</button>
-        <button id="detailNextButton" type="button">次の曲</button>
-        <a id="detailOpenButton" href="#" target="_blank" rel="noreferrer">R2音源を開く</a>
-      </div>
+        <div class="wave-wrap" id="waveWrap">
+          <canvas id="waveCanvas" width="720" height="54" aria-hidden="true"></canvas>
+          <input id="seekRange" type="range" min="0" max="1000" value="0" step="1" aria-label="再生位置">
+        </div>
+        <div class="time-row">
+          <span id="currentTime">0:00</span>
+          <span id="durationTime">0:00</span>
+        </div>
 
-      <div class="detail-grid">
-        <section>
-          <h3>基本情報</h3>
-          <dl id="detailBasic"></dl>
-        </section>
-        <section>
-          <h3>歌唱メモ</h3>
-          <dl id="detailVocal"></dl>
-          <p class="detail-memo" id="detailMemo"></p>
-        </section>
+        <div class="player-controls">
+          <button id="playerPrevButton" type="button" aria-label="前の曲" title="前の曲">‹</button>
+          <button id="playerPlayButton" class="main-play" type="button" aria-label="再生" title="再生">▶</button>
+          <button id="playerNextButton" type="button" aria-label="次の曲" title="次の曲">›</button>
+          <button id="shuffleButton" type="button" aria-label="シャッフル" title="シャッフル">⤨</button>
+        </div>
       </div>
-    </section>
+      <audio id="audio" preload="metadata"></audio>
+    </aside>
 
     <template id="trackTemplate">
       <article class="track-card">
@@ -116,6 +100,6 @@
       </article>
     </template>
 
-    <script src="./app.js?v=20260601-10" type="module"></script>
+    <script src="./app.js?v=20260601-11" type="module"></script>
   </body>
 </html>
