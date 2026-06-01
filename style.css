@@ -212,9 +212,13 @@ h1 {
 .play-button {
   width: 42px;
   height: 42px;
-  background: var(--accent);
+  background:
+    radial-gradient(circle at 34% 26%, rgba(255, 255, 255, 0.34), transparent 30%),
+    linear-gradient(145deg, #c4563b, #126b5a);
   color: #fff;
-  border-color: var(--accent);
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 8px 18px rgba(18, 107, 90, 0.24);
+  font-size: 1rem;
 }
 
 .track-main {
@@ -333,13 +337,12 @@ h1 {
 }
 
 .inline-actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
-.inline-actions button,
-.inline-actions a {
+.inline-actions button {
   display: grid;
   place-items: center;
   min-height: 40px;
@@ -356,15 +359,6 @@ h1 {
   border-color: var(--accent);
   background: var(--accent);
   color: #fff;
-}
-
-.inline-actions a {
-  grid-column: 1 / -1;
-}
-
-.inline-actions a[aria-disabled="true"] {
-  opacity: 0.42;
-  pointer-events: none;
 }
 
 .empty {

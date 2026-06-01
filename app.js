@@ -175,9 +175,11 @@ function normalizeTrack(raw, index = 0) {
   const category = pick(raw, ["category", "version", "mix", "master", "mastering"]);
   const fileName = pick(raw, ["fileName", "filename", "file", "wav_filename", "WAV", "wav"]);
   const url = pick(raw, ["url", "r2_url", "audioUrl", "audio_url", "URL"]);
+  const resolvedFileName = fileName || fileNameFromUrl(url);
+  const fileVersion = versionFromFileName(resolvedFileName);
   if (!title && !fileName && !url) return null;
 
-  const tags = normalizeTags(pick(raw, ["tags", "tag"]));
+  const genreTags = normalizeTags(pick(raw, ["tags", "tag"]));
   const date = pick(raw, ["last_updated", "date", "created", "recorded"]);
   const memo = pick(raw, ["memo", "note", "notes"]);
   const id = pick(raw, ["id", "ID", "uuid"]) || slug(`${artist}-${title}-${category}-${fileName}-${index}`);
@@ -192,18 +194,20 @@ function normalizeTrack(raw, index = 0) {
     title: title || stripExtension(fileName) || "Untitled",
     artist: artist || "",
     category: category || "",
-    tags: [category, ...tags].filter(Boolean),
+    version: fileVersion || category || "",
+    tags: [category, ...genreTags].filter(Boolean),
+    genreTags,
     date: date || "",
     displayDate: formatDate(date),
     memo: memo || "",
     url,
-    fileName: fileName || fileNameFromUrl(url),
+    fileName: resolvedFileName,
     quality,
     retake,
     karaokeReady,
     highestNote,
     key,
-    searchText: [title, artist, category, tags.join(" "), date, memo, fileName, highestNote, key].join(" ").toLowerCase(),
+    searchText: [title, artist, category, fileVersion, genreTags.join(" "), date, memo, fileName, highestNote, key].join(" ").toLowerCase(),
   };
 }
 
@@ -267,12 +271,11 @@ function renderTrack(track) {
   const stats = node.querySelector(".track-stats");
   stats.append(makeStat(starText(track.quality), "stars"));
   stats.append(makeStat(track.displayDate || "-"));
-  stats.append(makeStat(`Re ${track.retake || 0}`));
-  stats.append(makeStat(track.karaokeReady ? "\u6b4c\u3048\u308b" : "\u672a\u78ba\u8a8d",
-    track.karaokeReady ? "ready" : "not-ready"));
+  if (Number(track.retake) > 0) stats.append(makeStat(`Re ${track.retake}`));
+  if (track.karaokeReady) stats.append(makeStat("\u6b4c\u3048\u308b", "ready"));
 
   const meta = node.querySelector(".track-meta");
-  const metaItems = [track.highestNote && `Top ${track.highestNote}`, track.key !== "" && `Key ${track.key}`, track.category].filter(Boolean);
+  const metaItems = [track.version, ...track.genreTags].filter(Boolean);
   for (const item of metaItems.slice(0, 4)) {
     const pill = document.createElement("span");
     pill.className = "meta-pill";
@@ -312,25 +315,15 @@ function renderInlineDetail(track) {
   [
     track.highestNote,
     track.key !== "" && `key ${track.key}`,
-    track.category,
+    track.version,
+    ...track.genreTags,
     track.fileName,
   ].filter(Boolean).forEach((item) => facts.append(makeFact(item)));
   detail.append(facts);
 
   const actions = document.createElement("div");
   actions.className = "inline-actions";
-  actions.append(makeAction("\u518d\u751f", () => playTrack(track), true));
   actions.append(makeAction(state.favorites.has(track.id) ? "★ \u304a\u6c17\u306b\u5165\u308a" : "☆ \u304a\u6c17\u306b\u5165\u308a", () => toggleFavorite(track.id)));
-  actions.append(makeAction("\u524d\u306e\u66f2", () => moveDetail(-1)));
-  actions.append(makeAction("\u6b21\u306e\u66f2", () => moveDetail(1)));
-
-  const open = document.createElement("a");
-  open.href = track.url || "#";
-  open.target = "_blank";
-  open.rel = "noreferrer";
-  open.textContent = "R2\u97f3\u6e90\u3092\u958b\u304f";
-  if (!track.url) open.setAttribute("aria-disabled", "true");
-  actions.append(open);
   detail.append(actions);
 
   return detail;
@@ -472,6 +465,13 @@ function fileNameFromUrl(value) {
   } catch {
     return "";
   }
+}
+
+function versionFromFileName(value) {
+  const name = stripExtension(fileNameFromUrl(value) || value);
+  const match = name.match(/(?:^|_)(Re_)?(Mastering-\d+|Master-\d+|Mix-\d+)$/i);
+  if (!match) return "";
+  return `${match[1] || ""}${match[2]}`;
 }
 
 function dateValue(value) {
