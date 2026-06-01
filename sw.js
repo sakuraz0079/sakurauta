@@ -1,15 +1,21 @@
-const CACHE_NAME = "utawav-app-v15";
+const CACHE_NAME = "sak-uta-app-v17";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./style.css?v=20260601-15",
-  "./app.js?v=20260601-15",
+  "./style.css?v=20260601-17",
+  "./app.js?v=20260601-17",
   "./manifest.webmanifest",
-  "./icon.svg"
+  "./icon/IMG_2956.png",
+  "./icon/IMG_2957.png",
+  "./icon-192.png",
+  "./icon-512.png",
+  "./icon-maskable-512.png",
+  "./apple-touch-icon.png"
 ];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
+  self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
@@ -18,6 +24,7 @@ self.addEventListener("activate", (event) => {
       Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))
     )
   );
+  self.clients.claim();
 });
 
 self.addEventListener("fetch", (event) => {

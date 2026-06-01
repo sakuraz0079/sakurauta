@@ -1,4 +1,4 @@
-# Sakurauta
+# sak_Uta
 
 スマホ向けの「歌ってみたWAV」ライブラリPWAです。
 
