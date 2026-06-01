@@ -7,6 +7,7 @@ const APP_SHELL = [
   "./manifest.webmanifest",
   "./icon/IMG_2956.png",
   "./icon/IMG_2957.png",
+  "./icon/sak-uta-logo-transparent.png",
   "./icon-192.png",
   "./icon-512.png",
   "./icon-maskable-512.png",
