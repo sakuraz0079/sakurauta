@@ -694,6 +694,166 @@ h1 {
   color: #fff;
 }
 
+.inline-edit-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  padding: 11px;
+  border: 1px solid rgba(239, 23, 68, 0.24);
+  border-radius: 8px;
+  background: rgba(20, 18, 21, 0.48);
+}
+
+.edit-field,
+.edit-check {
+  min-width: 0;
+  color: rgba(243, 238, 240, 0.62);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.edit-field {
+  display: grid;
+  gap: 5px;
+}
+
+.edit-field-wide,
+.edit-actions,
+.edit-error {
+  grid-column: 1 / -1;
+}
+
+.edit-field input,
+.edit-field select,
+.edit-field textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+}
+
+.edit-field input,
+.edit-field select {
+  min-height: 36px;
+  padding: 0 9px;
+}
+
+.edit-field textarea {
+  min-height: 74px;
+  padding: 9px;
+  resize: vertical;
+}
+
+.edit-check {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink);
+}
+
+.edit-check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
+.edit-tag-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.edit-tag-suggestions button {
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.edit-tag-suggestions button.active {
+  border-color: rgba(239, 23, 68, 0.5);
+  background: rgba(239, 23, 68, 0.16);
+  color: #ffb7c5;
+}
+
+.edit-rating-field {
+  grid-column: 1 / -1;
+}
+
+.edit-rating {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.edit-rating button {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(243, 238, 240, 0.42);
+  font-size: 1.38rem;
+  line-height: 1;
+}
+
+.edit-rating button.active {
+  border-color: rgba(255, 205, 91, 0.62);
+  background: rgba(255, 205, 91, 0.14);
+  color: #ffd166;
+}
+
+.edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.edit-actions button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-2);
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.edit-actions button[type="submit"] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.edit-actions button:disabled {
+  opacity: 0.62;
+}
+
+.edit-error {
+  margin: 0;
+  padding: 8px 9px;
+  border-radius: 8px;
+  background: rgba(239, 23, 68, 0.14);
+  color: #ffb7c5;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
 .empty {
   display: grid;
   justify-items: center;
@@ -1003,7 +1163,7 @@ audio {
 .player.compact .now-playing {
   min-height: 0;
   margin-bottom: 8px;
-  padding-right: 44px;
+  padding: 0 44px;
 }
 
 .player.compact .now-playing span,
@@ -1016,6 +1176,7 @@ audio {
 
 .player.compact .now-playing p {
   max-width: min(100%, 520px);
+  justify-self: center;
   font-size: 0.96rem;
 }
 

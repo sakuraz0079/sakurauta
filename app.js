@@ -1,14 +1,16 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbxNHOf1ueQvlaOSZSgxSt8_Nq5CDwQVxUWLlT64dpSy3ha8NBFZH4JX_2pEEdB1wefQdw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyh4854enNZlGObSJu3qc3_t3MqD6lO9afRWbWLkjNcQpfCu1P8GXrQPCyPjbdZFzy3RQ/exec";
 const CACHE_KEY = "utawav.tracks";
 const FAVORITES_KEY = "utawav.favorites";
 const RECENT_KEY = "utawav.recent";
 const LAST_TRACK_KEY = "utawav.lastTrack";
 const SEARCH_HISTORY_KEY = "utawav.searchHistory";
+const EDIT_TOKEN_KEY = "utawav.editToken";
 const SHUFFLE_KEY = "utawav.shuffle";
 const REPEAT_KEY = "utawav.repeat";
 const PLAYLISTS_KEY = "utawav.playlists";
 const KARAOKE_FILTER = "__karaoke_ready";
 const PAGE_SIZE = 20;
+const EXCLUDED_GENRE_TAGS = new Set(["mastering"]);
 
 const state = {
   tracks: [],
@@ -18,6 +20,9 @@ const state = {
   tag: "",
   currentId: "",
   detailId: "",
+  editId: "",
+  savingEditId: "",
+  editError: "",
   isPlaying: false,
   isSeeking: false,
   playbackStatus: "idle",
@@ -82,6 +87,8 @@ async function init() {
   renderPlaylistOptions();
   await loadTracks();
   restoreLastTrack();
+  state.compactPlayer = true;
+  state.playerManualCompact = false;
   updatePlayerCompact();
   updatePlayerControls();
   drawWaveform();
@@ -227,12 +234,7 @@ async function loadTracks({ force = false } = {}) {
 
   els.sync.textContent = "\u66f4\u65b0\u4e2d";
   try {
-    const payload = await fetchApiPayload();
-    const rows = extractRows(payload);
-    state.tracks = rows.map(normalizeTrack).filter(Boolean);
-    localStorage.setItem(CACHE_KEY, JSON.stringify(state.tracks));
-    els.sync.textContent = `\u66f4\u65b0 ${formatTime(new Date())}`;
-    render();
+    await reloadTracksFromApi({ status: "\u66f4\u65b0\u4e2d", successPrefix: "\u66f4\u65b0" });
   } catch (error) {
     if (!state.tracks.length && cached?.length) {
       state.tracks = cached.map(normalizeTrack).filter(Boolean);
@@ -283,6 +285,125 @@ function fetchJsonp(url) {
   });
 }
 
+async function submitMetadataEdit(track, form) {
+  document.activeElement?.blur?.();
+  const fields = metadataFieldsFromForm(form);
+  state.savingEditId = track.id;
+  state.editError = "";
+  render();
+
+  try {
+    const result = await saveTrackMetadata(track.id, fields);
+    applyMetadataUpdate(track.id, fields);
+    state.editId = "";
+    state.savingEditId = "";
+    state.editError = "";
+    els.sync.textContent = result?.opaque ? "保存リクエスト送信・同期確認中" : "保存・同期確認中";
+    render();
+    try {
+      const tracks = await reloadTracksFromApi({ status: "同期確認中", successPrefix: "保存・同期" });
+      if (!tracks.some((item) => item.id === track.id)) {
+        els.sync.textContent = `保存済み・曲が見つかりません ${formatTime(new Date())}`;
+      }
+    } catch (syncError) {
+      const reason = syncError?.message ? `: ${syncError.message}` : "";
+      els.sync.textContent = `保存済み・同期未確認${reason}`;
+      render();
+    }
+  } catch (error) {
+    state.savingEditId = "";
+    state.editError = error?.message ? `保存できませんでした: ${error.message}` : "保存できませんでした";
+    render();
+  }
+}
+
+async function reloadTracksFromApi({ status = "\u540c\u671f\u78ba\u8a8d\u4e2d", successPrefix = "\u540c\u671f" } = {}) {
+  els.sync.textContent = status;
+  const payload = await fetchApiPayload();
+  const rows = extractRows(payload);
+  state.tracks = rows.map(normalizeTrack).filter(Boolean);
+  localStorage.setItem(CACHE_KEY, JSON.stringify(state.tracks));
+
+  const current = getCurrentTrack();
+  if (current) updatePlayerInfo(current);
+
+  els.sync.textContent = `${successPrefix} ${formatTime(new Date())}`;
+  render();
+  return state.tracks;
+}
+
+function metadataFieldsFromForm(form) {
+  const data = new FormData(form);
+  const retake = Math.max(0, Number.parseInt(data.get("retake_count") || "0", 10) || 0);
+  return {
+    tags: String(data.get("tags") || "").trim(),
+    karaoke_ready: data.has("karaoke_ready"),
+    highest_note: String(data.get("highest_note") || "").trim(),
+    key: String(data.get("key") || "").trim() || "±0",
+    quality_score: String(data.get("quality_score") || "").trim(),
+    retake_count: retake,
+    memo: String(data.get("memo") || "").trim(),
+  };
+}
+
+async function saveTrackMetadata(id, fields) {
+  if (new URLSearchParams(location.search).has("demo")) {
+    return { ok: true, demo: true };
+  }
+
+  const body = new URLSearchParams({
+    action: "updateTrack",
+    id: String(id),
+    payload: JSON.stringify(fields),
+  });
+  const editToken = getEditToken();
+  if (!editToken) throw new Error("編集パスコードが必要です");
+  if (editToken) body.set("token", editToken);
+
+  try {
+    const response = await fetch(API_URL, { method: "POST", body });
+    if (!response.ok) throw new Error(`API error ${response.status}`);
+    const text = await response.text();
+    const payload = text ? JSON.parse(text) : {};
+    if (payload?.ok === false) throw new Error(payload.error || "API save error");
+    return payload;
+  } catch (error) {
+    if (!(error instanceof TypeError)) throw error;
+    await fetch(API_URL, { method: "POST", mode: "no-cors", body });
+    return { ok: true, opaque: true };
+  }
+}
+
+function getEditToken() {
+  let token = localStorage.getItem(EDIT_TOKEN_KEY) || "";
+  if (!token) {
+    token = window.prompt("編集パスコードを入力してください")?.trim() || "";
+    if (token) localStorage.setItem(EDIT_TOKEN_KEY, token);
+  }
+  return token;
+}
+
+function applyMetadataUpdate(id, fields) {
+  const track = state.tracks.find((item) => item.id === id);
+  if (!track) return;
+
+  const genreTags = normalizeTags(fields.tags);
+  track.genreTags = genreTags;
+  track.tags = [track.category, ...genreTags].filter(Boolean);
+  track.karaokeReady = Boolean(fields.karaoke_ready);
+  track.highestNote = fields.highest_note || "";
+  track.key = fields.key || "±0";
+  track.quality = fields.quality_score || "";
+  track.retake = fields.retake_count ? String(fields.retake_count) : "";
+  track.memo = fields.memo || "";
+  track.searchText = buildTrackSearchText(track);
+  localStorage.setItem(CACHE_KEY, JSON.stringify(state.tracks));
+
+  if (state.currentId === track.id) {
+    updatePlayerInfo(track);
+  }
+}
+
 function extractRows(payload) {
   if (Array.isArray(payload)) return payload;
   if (Array.isArray(payload?.data)) return payload.data;
@@ -304,7 +425,7 @@ function normalizeTrack(raw, index = 0) {
   if (!raw || typeof raw !== "object") return null;
   const title = pick(raw, ["title", "song", "name"]);
   const artist = pick(raw, ["artist", "original_artist"]);
-  const category = pick(raw, ["category", "version", "mix", "master", "mastering"]);
+  const category = normalizeCategory(pick(raw, ["category", "version", "mix", "master", "mastering"]));
   const fileName = pick(raw, ["fileName", "filename", "file", "wav_filename", "WAV", "wav"]);
   const url = pick(raw, ["url", "r2_url", "audioUrl", "audio_url", "URL"]);
   const resolvedFileName = fileName || fileNameFromUrl(url);
@@ -321,7 +442,7 @@ function normalizeTrack(raw, index = 0) {
   const highestNote = pick(raw, ["highest_note"]);
   const key = pick(raw, ["key"]);
 
-  return {
+  const track = {
     id,
     title: title || stripExtension(fileName) || "Untitled",
     artist: artist || "",
@@ -339,8 +460,9 @@ function normalizeTrack(raw, index = 0) {
     karaokeReady,
     highestNote,
     key,
-    searchText: [title, artist, category, fileVersion, genreTags.join(" "), date, memo, fileName, highestNote, key].join(" ").toLowerCase(),
   };
+  track.searchText = buildTrackSearchText(track);
+  return track;
 }
 
 function render() {
@@ -616,8 +738,17 @@ function renderInlineDetail(track) {
     detail.append(memberSection);
   }
 
+  if (state.editId === track.id) {
+    detail.append(renderMetadataEditor(track));
+  }
+
   const actions = document.createElement("div");
   actions.className = "inline-actions";
+  actions.append(makeAction(state.editId === track.id ? "\u7de8\u96c6\u3092\u9589\u3058\u308b" : "\u7de8\u96c6", () => {
+    state.editId = state.editId === track.id ? "" : track.id;
+    state.editError = "";
+    render();
+  }));
   actions.append(makeAction(state.favorites.has(track.id) ? "★ \u304a\u6c17\u306b\u5165\u308a" : "☆ \u304a\u6c17\u306b\u5165\u308a", () => toggleFavorite(track.id)));
   if (state.playlists.length) {
     const select = document.createElement("select");
@@ -643,6 +774,186 @@ function makeInlineSection(title) {
   heading.textContent = title;
   section.append(heading);
   return section;
+}
+
+function renderMetadataEditor(track) {
+  const form = document.createElement("form");
+  form.className = "inline-edit-form";
+
+  form.append(makeGenreInput(track.genreTags));
+  form.append(makeEditCheckbox("karaoke_ready", "\ud83c\udfa4 \u6b4c\u3048\u308b", track.karaokeReady));
+  form.append(makeEditInput("highest_note", "\u6700\u9ad8\u97f3", track.highestNote, "mid2G#"));
+  form.append(makeKeySelect(track.key));
+  form.append(makeRatingInput(track.quality));
+  form.append(makeEditInput("retake_count", "\u6b4c\u3044\u76f4\u3057\u6570", String(Number(track.retake) || 0), "0", "number"));
+
+  const memoLabel = document.createElement("label");
+  memoLabel.className = "edit-field edit-field-wide";
+  memoLabel.textContent = "\u30e1\u30e2";
+  const memo = document.createElement("textarea");
+  memo.name = "memo";
+  memo.rows = 3;
+  memo.value = track.memo || "";
+  memoLabel.append(memo);
+  form.append(memoLabel);
+
+  if (state.editError) {
+    const error = document.createElement("p");
+    error.className = "edit-error";
+    error.textContent = state.editError;
+    form.append(error);
+  }
+
+  const actions = document.createElement("div");
+  actions.className = "edit-actions";
+  const save = document.createElement("button");
+  save.type = "submit";
+  save.textContent = state.savingEditId === track.id ? "\u4fdd\u5b58\u4e2d" : "\u4fdd\u5b58";
+  save.disabled = state.savingEditId === track.id;
+  const cancel = document.createElement("button");
+  cancel.type = "button";
+  cancel.textContent = "\u30ad\u30e3\u30f3\u30bb\u30eb";
+  cancel.addEventListener("click", () => {
+    state.editId = "";
+    state.editError = "";
+    render();
+  });
+  actions.append(save, cancel);
+  form.append(actions);
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    submitMetadataEdit(track, form);
+  });
+
+  return form;
+}
+
+function makeEditInput(name, label, value, placeholder = "", type = "text") {
+  const field = document.createElement("label");
+  field.className = "edit-field";
+  field.textContent = label;
+  const input = document.createElement("input");
+  input.name = name;
+  input.type = type;
+  input.value = value || "";
+  input.placeholder = placeholder;
+  if (type === "number") input.min = "0";
+  field.append(input);
+  return field;
+}
+
+function makeGenreInput(selectedTags) {
+  const field = document.createElement("label");
+  field.className = "edit-field edit-field-wide";
+  field.textContent = "\u30b8\u30e3\u30f3\u30eb";
+
+  const input = document.createElement("input");
+  input.name = "tags";
+  input.value = selectedTags.join(", ");
+  input.placeholder = "\u30ed\u30c3\u30af, V\u7cfb, \u30e1\u30bf\u30eb";
+  field.append(input);
+
+  const suggestions = genreSuggestions();
+  if (suggestions.length) {
+    const chips = document.createElement("div");
+    chips.className = "edit-tag-suggestions";
+    for (const tag of suggestions) {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.textContent = tag;
+      chip.className = selectedTags.includes(tag) ? "active" : "";
+      chip.addEventListener("click", () => {
+        const current = normalizeTags(input.value);
+        const next = current.includes(tag) ? current.filter((item) => item !== tag) : [...current, tag];
+        input.value = next.join(", ");
+        chip.classList.toggle("active", next.includes(tag));
+      });
+      chips.append(chip);
+    }
+    field.append(chips);
+  }
+
+  return field;
+}
+
+function makeEditCheckbox(name, label, checked) {
+  const field = document.createElement("label");
+  field.className = "edit-field";
+  field.textContent = label;
+  const box = document.createElement("span");
+  box.className = "edit-check";
+  const input = document.createElement("input");
+  input.name = name;
+  input.type = "checkbox";
+  input.checked = checked;
+  box.append(input, document.createTextNode("\u5bfe\u8c61"));
+  field.append(box);
+  return field;
+}
+
+function makeKeySelect(value) {
+  const field = document.createElement("label");
+  field.className = "edit-field";
+  field.textContent = "\u30ad\u30fc";
+  const select = document.createElement("select");
+  select.name = "key";
+  for (let key = 6; key >= -6; key -= 1) {
+    const label = key === 0 ? "\u00b10" : key > 0 ? `+${key}` : String(key);
+    select.append(new Option(label, label));
+  }
+  select.value = value || "\u00b10";
+  field.append(select);
+  return field;
+}
+
+function makeRatingInput(value) {
+  const score = Math.max(0, Math.min(5, Number(value) || 0));
+  const field = document.createElement("div");
+  field.className = "edit-field edit-rating-field";
+  const label = document.createElement("span");
+  label.textContent = "\u8a55\u4fa1";
+  const input = document.createElement("input");
+  input.type = "hidden";
+  input.name = "quality_score";
+  input.value = score ? String(score) : "";
+  const stars = document.createElement("div");
+  stars.className = "edit-rating";
+  const buttons = [];
+
+  const paint = (nextScore) => {
+    input.value = nextScore ? String(nextScore) : "";
+    buttons.forEach((button, index) => {
+      button.textContent = index < nextScore ? "\u2605" : "\u2606";
+      button.classList.toggle("active", index < nextScore);
+    });
+  };
+
+  for (let index = 1; index <= 5; index += 1) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.setAttribute("aria-label", `\u8a55\u4fa1 ${index}`);
+    button.addEventListener("click", () => {
+      paint(Number(input.value) === index ? 0 : index);
+    });
+    buttons.push(button);
+    stars.append(button);
+  }
+
+  field.append(label, input, stars);
+  paint(score);
+  return field;
+}
+
+function genreSuggestions() {
+  const counts = new Map();
+  for (const track of state.tracks) {
+    for (const tag of track.genreTags) counts.set(tag, (counts.get(tag) || 0) + 1);
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ja"))
+    .slice(0, 12)
+    .map(([tag]) => tag);
 }
 
 function makeInfoCell(label, value) {
@@ -735,6 +1046,7 @@ function latestTracks(tracks, limit) {
 function playTrack(track, { autoplay = true } = {}) {
   if (!track.url) return;
   state.currentId = track.id;
+  if (autoplay) expandPlayerForPlayback();
   setPlaybackStatus(autoplay ? "loading" : "ready", autoplay ? "\u8aad\u307f\u8fbc\u307f\u4e2d" : "");
   if (els.audio.src !== track.url) {
     els.audio.src = track.url;
@@ -978,11 +1290,35 @@ function pick(source, keys) {
 }
 
 function normalizeTags(value) {
-  if (Array.isArray(value)) return value.map(String).map((tag) => tag.trim()).filter(Boolean);
-  return String(value || "")
-    .split(/[,\s/、，]+/)
+  const values = Array.isArray(value) ? value : String(value || "").split(/[,\s/、，]+/);
+  return values
+    .map(String)
     .map((tag) => tag.trim())
+    .filter((tag) => !EXCLUDED_GENRE_TAGS.has(tag.toLowerCase()))
     .filter(Boolean);
+}
+
+function normalizeCategory(value) {
+  const category = String(value || "").trim();
+  return EXCLUDED_GENRE_TAGS.has(category.toLowerCase()) ? "" : category;
+}
+
+function buildTrackSearchText(track) {
+  return [
+    track.title,
+    track.artist,
+    track.category,
+    track.version,
+    track.genreTags?.join(" "),
+    track.date,
+    track.memo,
+    track.fileName,
+    track.highestNote,
+    track.key,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
 }
 
 function readSet(key) {
