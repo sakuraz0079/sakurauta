@@ -100,6 +100,7 @@ function bindEvents() {
     if (event.key === "Enter") {
       event.preventDefault();
       commitSearchQuery();
+      els.search.blur();
     }
   });
   els.search.addEventListener("blur", commitSearchQuery);
