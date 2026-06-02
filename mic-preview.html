@@ -95,51 +95,35 @@
         overflow: visible;
       }
 
-      .mic-svg .glow {
-        fill: rgba(239, 23, 68, 0.14);
-      }
-
-      .mic-svg .body {
-        fill: none;
-        stroke: var(--mic);
-        stroke-width: 5.5;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-      }
-
-      .mic-svg .handle {
-        fill: none;
-        stroke: var(--mic);
-        stroke-width: 6.5;
-        stroke-linecap: round;
-      }
-
-      .mic-svg .mesh {
-        fill: none;
-        stroke: var(--mic);
-        stroke-width: 2.5;
-        stroke-linecap: round;
-        opacity: 0.78;
-      }
-
-      .mic-svg .neck {
-        fill: none;
-        stroke: var(--mic-dark);
-        stroke-width: 4;
-        stroke-linecap: round;
-      }
-
       .large .mic-svg {
         width: 132px;
         height: 132px;
+      }
+
+      .mic-svg .shadow {
+        fill: rgba(239, 23, 68, 0.15);
+      }
+
+      .mic-svg .shell,
+      .mic-svg .handle,
+      .mic-svg .end {
+        fill: var(--mic);
+      }
+
+      .mic-svg .grille {
+        fill: none;
+        stroke: #111113;
+        stroke-width: 2.4;
+        stroke-linecap: round;
+        opacity: 0.75;
       }
     </style>
   </head>
   <body>
     <main>
       <header>
-        <h1>SM58風マイクアイコン案</h1>
-        <p>一覧カードに置く実サイズと、形状確認用の拡大表示です。</p>
+        <h1>無線ハンドマイク風アイコン案</h1>
+        <p>参照先のような、斜め配置のシンプルな無線マイクアイコンに寄せた案です。</p>
       </header>
 
       <section class="panel">
@@ -147,13 +131,13 @@
         <div class="card-line">
           <span>曲名サンプル</span>
           <svg class="mic-svg" viewBox="0 0 64 64" aria-label="歌える" role="img">
-            <ellipse class="glow" cx="22" cy="21" rx="18" ry="17"/>
-            <path class="body" d="M12 21C12 11 19 5 27 8C36 11 40 21 36 29C32 37 21 38 15 31C13 29 12 25 12 21Z"/>
-            <path class="mesh" d="M16 18C21 15 27 15 33 18"/>
-            <path class="mesh" d="M15 24C22 21 30 22 37 26"/>
-            <path class="mesh" d="M19 30C25 29 30 30 35 33"/>
-            <path class="neck" d="M34 34L39 39"/>
-            <path class="handle" d="M39 39L56 56"/>
+            <g transform="rotate(-35 32 32)">
+              <ellipse class="shadow" cx="25" cy="21" rx="17" ry="18"/>
+              <rect class="shell" x="16" y="6" width="22" height="30" rx="11"/>
+              <path class="grille" d="M20 13H34M19 19H35M20 25H34"/>
+              <rect class="handle" x="24" y="33" width="12" height="24" rx="6"/>
+              <rect class="end" x="22" y="54" width="16" height="6" rx="3"/>
+            </g>
           </svg>
         </div>
       </section>
@@ -163,13 +147,13 @@
           <p class="label">実サイズ</p>
           <div class="box">
             <svg class="mic-svg" viewBox="0 0 64 64" aria-label="歌える" role="img">
-              <ellipse class="glow" cx="22" cy="21" rx="18" ry="17"/>
-              <path class="body" d="M12 21C12 11 19 5 27 8C36 11 40 21 36 29C32 37 21 38 15 31C13 29 12 25 12 21Z"/>
-              <path class="mesh" d="M16 18C21 15 27 15 33 18"/>
-              <path class="mesh" d="M15 24C22 21 30 22 37 26"/>
-              <path class="mesh" d="M19 30C25 29 30 30 35 33"/>
-              <path class="neck" d="M34 34L39 39"/>
-              <path class="handle" d="M39 39L56 56"/>
+              <g transform="rotate(-35 32 32)">
+                <ellipse class="shadow" cx="25" cy="21" rx="17" ry="18"/>
+                <rect class="shell" x="16" y="6" width="22" height="30" rx="11"/>
+                <path class="grille" d="M20 13H34M19 19H35M20 25H34"/>
+                <rect class="handle" x="24" y="33" width="12" height="24" rx="6"/>
+                <rect class="end" x="22" y="54" width="16" height="6" rx="3"/>
+              </g>
             </svg>
           </div>
         </div>
@@ -177,13 +161,13 @@
           <p class="label">拡大</p>
           <div class="box large">
             <svg class="mic-svg" viewBox="0 0 64 64" aria-label="歌える" role="img">
-              <ellipse class="glow" cx="22" cy="21" rx="18" ry="17"/>
-              <path class="body" d="M12 21C12 11 19 5 27 8C36 11 40 21 36 29C32 37 21 38 15 31C13 29 12 25 12 21Z"/>
-              <path class="mesh" d="M16 18C21 15 27 15 33 18"/>
-              <path class="mesh" d="M15 24C22 21 30 22 37 26"/>
-              <path class="mesh" d="M19 30C25 29 30 30 35 33"/>
-              <path class="neck" d="M34 34L39 39"/>
-              <path class="handle" d="M39 39L56 56"/>
+              <g transform="rotate(-35 32 32)">
+                <ellipse class="shadow" cx="25" cy="21" rx="17" ry="18"/>
+                <rect class="shell" x="16" y="6" width="22" height="30" rx="11"/>
+                <path class="grille" d="M20 13H34M19 19H35M20 25H34"/>
+                <rect class="handle" x="24" y="33" width="12" height="24" rx="6"/>
+                <rect class="end" x="22" y="54" width="16" height="6" rx="3"/>
+              </g>
             </svg>
           </div>
         </div>
