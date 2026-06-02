@@ -392,6 +392,15 @@ h1 {
   color: #fff;
 }
 
+.chip.karaoke-filter {
+  border-color: rgba(239, 23, 68, 0.42);
+  color: #ffb7c5;
+}
+
+.chip.karaoke-filter.active {
+  color: #fff;
+}
+
 .status-row {
   display: flex;
   justify-content: space-between;
@@ -686,11 +695,28 @@ h1 {
 }
 
 .empty {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
   padding: 32px 18px;
   border: 1px dashed var(--line);
   border-radius: 8px;
   color: var(--muted);
   text-align: center;
+}
+
+.empty p {
+  margin: 0;
+}
+
+.empty button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(239, 23, 68, 0.42);
+  border-radius: 8px;
+  background: rgba(239, 23, 68, 0.14);
+  color: #ffb7c5;
+  font-size: 0.82rem;
 }
 
 .pager {

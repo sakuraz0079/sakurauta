@@ -350,7 +350,7 @@ function render() {
   const start = (state.page - 1) * PAGE_SIZE;
   const pageTracks = tracks.slice(start, start + PAGE_SIZE);
 
-  els.count.textContent = `${tracks.length} / ${state.tracks.length} \u66f2`;
+  els.count.textContent = [`${tracks.length} / ${state.tracks.length} \u66f2`, ...activeFilterLabels()].join(" \u00b7 ");
   els.page.textContent = `${state.page} / ${pageCount}`;
   els.prevPage.disabled = state.page <= 1;
   els.nextPage.disabled = state.page >= pageCount;
@@ -360,7 +360,16 @@ function render() {
   if (!pageTracks.length) {
     const empty = document.createElement("div");
     empty.className = "empty";
-    empty.textContent = "\u8a72\u5f53\u3059\u308b\u66f2\u304c\u3042\u308a\u307e\u305b\u3093";
+    const message = document.createElement("p");
+    message.textContent = "\u8a72\u5f53\u3059\u308b\u66f2\u304c\u3042\u308a\u307e\u305b\u3093";
+    empty.append(message);
+    if (state.query || state.tag) {
+      const clear = document.createElement("button");
+      clear.type = "button";
+      clear.textContent = "\u691c\u7d22\u30fb\u7d5e\u308a\u8fbc\u307f\u3092\u30af\u30ea\u30a2";
+      clear.addEventListener("click", clearSearchAndTagFilters);
+      empty.append(clear);
+    }
     els.list.append(empty);
     return;
   }
@@ -371,11 +380,17 @@ function render() {
 }
 
 function renderTags() {
-  const tags = [...new Set(state.tracks.flatMap((track) => track.genreTags))].slice(0, 30);
+  const tagCounts = new Map();
+  for (const track of state.tracks) {
+    for (const tag of track.genreTags) tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+  }
+  const tags = [...tagCounts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ja"))
+    .slice(0, 30);
   els.tags.replaceChildren(makeChip("\u3059\u3079\u3066", ""));
   els.tags.append(makeChip("\ud83c\udfa4 \u6b4c\u3048\u308b", KARAOKE_FILTER));
-  for (const tag of tags) {
-    els.tags.append(makeChip(tag, tag));
+  for (const [tag, count] of tags) {
+    els.tags.append(makeChip(`${tag} ${count}`, tag));
   }
 }
 
@@ -410,6 +425,23 @@ function renderSearchHistory() {
 function updateClearSearchButton() {
   if (!els.clearSearch) return;
   els.clearSearch.hidden = els.search.value.trim() === "";
+}
+
+function activeFilterLabels() {
+  const labels = [];
+  if (state.query) labels.push(`\u691c\u7d22: ${els.search.value.trim()}`);
+  if (state.tag === KARAOKE_FILTER) labels.push("\u7d5e\u308a\u8fbc\u307f: \ud83c\udfa4 \u6b4c\u3048\u308b");
+  else if (state.tag) labels.push(`\u7d5e\u308a\u8fbc\u307f: ${state.tag}`);
+  return labels;
+}
+
+function clearSearchAndTagFilters() {
+  els.search.value = "";
+  state.query = "";
+  state.tag = "";
+  state.page = 1;
+  updateClearSearchButton();
+  render();
 }
 
 function renderPlaylistOptions() {
@@ -469,6 +501,7 @@ function makeChip(label, value) {
   const button = document.createElement("button");
   button.type = "button";
   button.className = `chip${state.tag === value ? " active" : ""}`;
+  if (value === KARAOKE_FILTER) button.classList.add("karaoke-filter");
   button.textContent = label;
   button.addEventListener("click", () => {
     state.tag = state.tag === value ? "" : value;
