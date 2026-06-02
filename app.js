@@ -435,7 +435,9 @@ function renderTrack(track) {
     const karaokeIcon = document.createElement("span");
     karaokeIcon.className = "karaoke-icon";
     karaokeIcon.setAttribute("aria-label", "\u6b4c\u3048\u308b");
+    karaokeIcon.setAttribute("role", "img");
     karaokeIcon.title = "\u6b4c\u3048\u308b";
+    karaokeIcon.textContent = "\ud83c\udfa4";
     title.append(karaokeIcon);
   }
   node.querySelector("p").textContent = track.artist || "\u30a2\u30fc\u30c6\u30a3\u30b9\u30c8\u672a\u8a2d\u5b9a";
