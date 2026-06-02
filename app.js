@@ -37,6 +37,7 @@ const els = {
   appShell: document.querySelector(".app-shell"),
   player: document.querySelector("#player"),
   search: document.querySelector("#searchInput"),
+  clearSearch: document.querySelector("#clearSearchButton"),
   searchHistory: document.querySelector("#searchHistoryChips"),
   sort: document.querySelector("#sortSelect"),
   view: document.querySelector("#viewSelect"),
@@ -75,6 +76,7 @@ init();
 
 async function init() {
   bindEvents();
+  updateClearSearchButton();
   renderSearchHistory();
   renderPlaylistOptions();
   await loadTracks();
@@ -91,6 +93,7 @@ function bindEvents() {
   els.search.addEventListener("input", () => {
     state.query = els.search.value.trim().toLowerCase();
     state.page = 1;
+    updateClearSearchButton();
     render();
   });
   els.search.addEventListener("keydown", (event) => {
@@ -100,6 +103,14 @@ function bindEvents() {
     }
   });
   els.search.addEventListener("blur", commitSearchQuery);
+  els.clearSearch.addEventListener("click", () => {
+    els.search.value = "";
+    state.query = "";
+    state.page = 1;
+    updateClearSearchButton();
+    render();
+    els.search.focus();
+  });
 
   els.sort.addEventListener("change", () => {
     state.sort = els.sort.value;
@@ -385,11 +396,17 @@ function renderSearchHistory() {
       els.search.value = query;
       state.query = query.toLowerCase();
       state.page = 1;
+      updateClearSearchButton();
       commitSearchQuery();
       render();
     });
     els.searchHistory.append(button);
   }
+}
+
+function updateClearSearchButton() {
+  if (!els.clearSearch) return;
+  els.clearSearch.hidden = els.search.value.trim() === "";
 }
 
 function renderPlaylistOptions() {

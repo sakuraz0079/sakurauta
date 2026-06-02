@@ -146,6 +146,26 @@ h1 {
   color: rgba(248, 247, 244, 0.42);
 }
 
+.clear-search-button {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.clear-search-button[hidden] {
+  display: none;
+}
+
 .search-line {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 58px;
