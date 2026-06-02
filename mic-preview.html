@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>sak_Uta mic icon preview</title>
+    <title>sak_Uta mic emoji preview</title>
     <style>
       :root {
         color-scheme: dark;
@@ -13,8 +13,6 @@
         --ink: #f3eef0;
         --muted: rgba(243, 238, 240, 0.62);
         --accent: #ef1744;
-        --mic: #ffb7c5;
-        --mic-dark: #d85c76;
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         background: var(--bg);
         color: var(--ink);
@@ -55,6 +53,12 @@
         padding: 16px;
       }
 
+      .label {
+        margin-bottom: 8px;
+        color: var(--muted);
+        font-size: 0.78rem;
+      }
+
       .card-line {
         display: flex;
         align-items: center;
@@ -81,64 +85,48 @@
         background: #171719;
       }
 
-      .label {
-        margin-bottom: 8px;
-        color: var(--muted);
-        font-size: 0.78rem;
-      }
-
-      .mic-svg {
-        display: block;
+      .emoji-mic {
+        display: inline-grid;
+        place-items: center;
         flex: 0 0 auto;
-        width: 24px;
-        height: 24px;
-        overflow: visible;
+        width: 22px;
+        height: 22px;
+        font-size: 15px;
+        line-height: 1;
       }
 
-      .large .mic-svg {
+      .emoji-mic.badge {
+        border-radius: 999px;
+        background: rgba(239, 23, 68, 0.14);
+      }
+
+      .large .emoji-mic {
         width: 132px;
         height: 132px;
-      }
-
-      .mic-svg .shadow {
-        fill: rgba(239, 23, 68, 0.15);
-      }
-
-      .mic-svg .shell,
-      .mic-svg .handle,
-      .mic-svg .end {
-        fill: var(--mic);
-      }
-
-      .mic-svg .grille {
-        fill: none;
-        stroke: #111113;
-        stroke-width: 2.4;
-        stroke-linecap: round;
-        opacity: 0.75;
+        font-size: 92px;
       }
     </style>
   </head>
   <body>
     <main>
       <header>
-        <h1>無線ハンドマイク風アイコン案</h1>
-        <p>参照先のような、斜め配置のシンプルな無線マイクアイコンに寄せた案です。</p>
+        <h1>マイク絵文字アイコン案</h1>
+        <p>端末標準の 🎤 を使う案です。小さいサイズでも形が崩れにくい一方、iPhone/Android/PCで見た目が少し変わります。</p>
       </header>
 
       <section class="panel">
-        <p class="label">カード内想定</p>
+        <p class="label">カード内想定: 背景あり</p>
         <div class="card-line">
           <span>曲名サンプル</span>
-          <svg class="mic-svg" viewBox="0 0 64 64" aria-label="歌える" role="img">
-            <g transform="rotate(-35 32 32)">
-              <ellipse class="shadow" cx="25" cy="21" rx="17" ry="18"/>
-              <rect class="shell" x="16" y="6" width="22" height="30" rx="11"/>
-              <path class="grille" d="M20 13H34M19 19H35M20 25H34"/>
-              <rect class="handle" x="24" y="33" width="12" height="24" rx="6"/>
-              <rect class="end" x="22" y="54" width="16" height="6" rx="3"/>
-            </g>
-          </svg>
+          <span class="emoji-mic badge" aria-label="歌える" role="img">🎤</span>
+        </div>
+      </section>
+
+      <section class="panel">
+        <p class="label">カード内想定: 背景なし</p>
+        <div class="card-line">
+          <span>曲名サンプル</span>
+          <span class="emoji-mic" aria-label="歌える" role="img">🎤</span>
         </div>
       </section>
 
@@ -146,29 +134,13 @@
         <div>
           <p class="label">実サイズ</p>
           <div class="box">
-            <svg class="mic-svg" viewBox="0 0 64 64" aria-label="歌える" role="img">
-              <g transform="rotate(-35 32 32)">
-                <ellipse class="shadow" cx="25" cy="21" rx="17" ry="18"/>
-                <rect class="shell" x="16" y="6" width="22" height="30" rx="11"/>
-                <path class="grille" d="M20 13H34M19 19H35M20 25H34"/>
-                <rect class="handle" x="24" y="33" width="12" height="24" rx="6"/>
-                <rect class="end" x="22" y="54" width="16" height="6" rx="3"/>
-              </g>
-            </svg>
+            <span class="emoji-mic badge" aria-label="歌える" role="img">🎤</span>
           </div>
         </div>
         <div>
           <p class="label">拡大</p>
           <div class="box large">
-            <svg class="mic-svg" viewBox="0 0 64 64" aria-label="歌える" role="img">
-              <g transform="rotate(-35 32 32)">
-                <ellipse class="shadow" cx="25" cy="21" rx="17" ry="18"/>
-                <rect class="shell" x="16" y="6" width="22" height="30" rx="11"/>
-                <path class="grille" d="M20 13H34M19 19H35M20 25H34"/>
-                <rect class="handle" x="24" y="33" width="12" height="24" rx="6"/>
-                <rect class="end" x="22" y="54" width="16" height="6" rx="3"/>
-              </g>
-            </svg>
+            <span class="emoji-mic badge" aria-label="歌える" role="img">🎤</span>
           </div>
         </div>
       </section>
