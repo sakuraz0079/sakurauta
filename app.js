@@ -727,22 +727,13 @@ function renderInlineDetail(track) {
     ["\u6700\u9ad8\u97f3", track.highestNote],
     ["\u30ad\u30fc", track.key !== "" ? track.key : "\u00b10"],
   ].filter(([, value]) => value);
-  if (singFacts.length) {
-    const section = makeInlineSection("\u6b4c\u3046\u5224\u65ad");
-    const grid = document.createElement("div");
-    grid.className = "inline-info-grid";
-    singFacts.forEach(([label, value]) => grid.append(makeInfoCell(label, value)));
-    section.append(grid);
-    detail.append(section);
-  }
-
-  if (track.genreTags.length || track.category) {
-    const section = makeInlineSection("\u5206\u985e");
-    const facts = document.createElement("div");
-    facts.className = "inline-facts";
-    [track.category, ...track.genreTags].filter(Boolean).forEach((item) => facts.append(makeFact(item)));
-    section.append(facts);
-    detail.append(section);
+  const categoryItems = [track.category, ...track.genreTags].filter(Boolean);
+  if (singFacts.length || categoryItems.length) {
+    const summary = document.createElement("div");
+    summary.className = "inline-summary";
+    singFacts.forEach(([label, value]) => summary.append(makeInfoCell(label, value)));
+    categoryItems.forEach((item) => summary.append(makeFact(item)));
+    detail.append(summary);
   }
 
   const memoSection = makeInlineSection("\u30e1\u30e2");
@@ -752,23 +743,12 @@ function renderInlineDetail(track) {
   memoSection.append(memo);
   detail.append(memoSection);
 
-  if (track.fileName || track.displayDate) {
-    const section = makeInlineSection("\u7ba1\u7406\u60c5\u5831");
-    const admin = document.createElement("p");
-    admin.className = "inline-admin";
-    admin.textContent = [track.fileName, track.displayDate].filter(Boolean).join(" \u00b7 ");
-    section.append(admin);
-    detail.append(section);
-  }
-
   const memberships = playlistMemberships(track.id);
   if (memberships.length) {
-    const memberSection = makeInlineSection("\u5165\u3063\u3066\u3044\u308b\u30ea\u30b9\u30c8");
     const memberWrap = document.createElement("div");
     memberWrap.className = "inline-memberships";
     memberships.forEach((playlist) => memberWrap.append(makeMembershipChip(track.id, playlist)));
-    memberSection.append(memberWrap);
-    detail.append(memberSection);
+    detail.append(memberWrap);
   }
 
   if (state.editId === track.id) {
@@ -820,12 +800,17 @@ function renderMetadataEditor(track) {
   const form = document.createElement("form");
   form.className = "inline-edit-form";
 
-  form.append(makeGenreInput(track.genreTags));
+  form.append(makeEditHeading("\u3088\u304f\u4f7f\u3046\u9805\u76ee"));
+  form.append(makeRatingInput(track.quality));
   form.append(makeEditCheckbox("karaoke_ready", "\ud83c\udfa4 \u6b4c\u3048\u308b", track.karaokeReady));
+
+  form.append(makeEditHeading("\u6b4c\u3046\u5224\u65ad"));
   form.append(makeEditInput("highest_note", "\u6700\u9ad8\u97f3", track.highestNote, "mid2G#"));
   form.append(makeKeySelect(track.key));
-  form.append(makeRatingInput(track.quality));
   form.append(makeEditInput("retake_count", "\u6b4c\u3044\u76f4\u3057\u6570", String(Number(track.retake) || 0), "0", "number"));
+
+  form.append(makeEditHeading("\u5206\u985e\u30fb\u30e1\u30e2"));
+  form.append(makeGenreInput(track.genreTags));
 
   const memoLabel = document.createElement("label");
   memoLabel.className = "edit-field edit-field-wide";
@@ -867,6 +852,13 @@ function renderMetadataEditor(track) {
   });
 
   return form;
+}
+
+function makeEditHeading(text) {
+  const heading = document.createElement("span");
+  heading.className = "edit-group-heading";
+  heading.textContent = text;
+  return heading;
 }
 
 function makeEditInput(name, label, value, placeholder = "", type = "text") {

@@ -575,13 +575,19 @@ h1 {
 
 .inline-memo {
   margin: 0;
-  padding: 10px;
+  padding: 9px 10px;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.07);
   color: var(--ink);
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   line-height: 1.5;
   white-space: pre-wrap;
+}
+
+.inline-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
 }
 
 .inline-facts {
@@ -597,26 +603,35 @@ h1 {
 }
 
 .inline-info-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   min-width: 0;
-  padding: 9px 10px;
+  min-height: 30px;
+  padding: 6px 9px;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.07);
+  line-height: 1;
 }
 
 .inline-info-label {
-  display: block;
-  margin-bottom: 3px;
+  display: inline-flex;
+  align-items: center;
   color: rgba(243, 238, 240, 0.52);
   font-size: 0.7rem;
   font-weight: 800;
+  line-height: 1;
 }
 
 .inline-info-value {
-  display: block;
+  display: inline-flex;
+  align-items: center;
   overflow-wrap: anywhere;
   color: var(--ink);
-  font-size: 0.92rem;
+  font-size: 0.86rem;
   font-weight: 800;
+  line-height: 1;
 }
 
 .inline-section {
@@ -632,14 +647,19 @@ h1 {
 
 .inline-fact,
 .membership-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 0;
+  min-height: 30px;
   max-width: 100%;
-  padding: 4px 8px;
+  padding: 5px 8px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 700;
+  line-height: 1;
   overflow-wrap: anywhere;
 }
 
@@ -737,12 +757,20 @@ h1 {
 
 .inline-edit-form {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 9px;
   padding: 11px;
   border: 1px solid rgba(239, 23, 68, 0.24);
   border-radius: 8px;
   background: rgba(20, 18, 21, 0.48);
+}
+
+.edit-group-heading {
+  grid-column: 1 / -1;
+  margin-top: 2px;
+  color: rgba(243, 238, 240, 0.48);
+  font-size: 0.7rem;
+  font-weight: 900;
 }
 
 .edit-field,
@@ -831,7 +859,7 @@ h1 {
 }
 
 .edit-rating-field {
-  grid-column: 1 / -1;
+  grid-column: span 2;
 }
 
 .edit-rating {
@@ -1386,5 +1414,21 @@ audio {
     width: min(720px, calc(100% - 28px));
     right: 14px;
     left: auto;
+  }
+}
+
+@media (max-width: 430px) {
+  .inline-edit-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .edit-rating-field {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 360px) {
+  .inline-edit-form {
+    grid-template-columns: 1fr;
   }
 }
