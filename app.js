@@ -1,4 +1,4 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbz2PjeyxX01bEjnGa0nkliICSxpAQhFC73qm78eAO6UTZzOAz1liBUN-26PVa7UDzrRuw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxNHOf1ueQvlaOSZSgxSt8_Nq5CDwQVxUWLlT64dpSy3ha8NBFZH4JX_2pEEdB1wefQdw/exec";
 const CACHE_KEY = "utawav.tracks";
 const FAVORITES_KEY = "utawav.favorites";
 const RECENT_KEY = "utawav.recent";
