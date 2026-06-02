@@ -23,6 +23,7 @@ const state = {
   editId: "",
   savingEditId: "",
   editError: "",
+  editStatus: null,
   isPlaying: false,
   isSeeking: false,
   playbackStatus: "idle",
@@ -290,6 +291,7 @@ async function submitMetadataEdit(track, form) {
   const fields = metadataFieldsFromForm(form);
   state.savingEditId = track.id;
   state.editError = "";
+  setEditStatus(track.id, "saving", "保存中");
   render();
 
   try {
@@ -298,22 +300,37 @@ async function submitMetadataEdit(track, form) {
     state.editId = "";
     state.savingEditId = "";
     state.editError = "";
-    els.sync.textContent = result?.opaque ? "保存リクエスト送信・同期確認中" : "保存・同期確認中";
+    setEditStatus(track.id, "syncing", result?.opaque ? "保存リクエスト送信・同期確認中" : "保存・同期確認中");
+    state.detailId = track.id;
+    keepTrackInView(track.id);
     render();
     try {
       const tracks = await reloadTracksFromApi({ status: "同期確認中", successPrefix: "保存・同期" });
       if (!tracks.some((item) => item.id === track.id)) {
-        els.sync.textContent = `保存済み・曲が見つかりません ${formatTime(new Date())}`;
+        setEditStatus(track.id, "warning", `保存済み・曲が見つかりません ${formatTime(new Date())}`);
+        render();
+      } else {
+        setEditStatus(track.id, "success", `保存・同期完了 ${formatTime(new Date())}`);
+        state.detailId = track.id;
+        keepTrackInView(track.id);
+        render();
+        scrollTrackIntoView(track.id);
       }
     } catch (syncError) {
       const reason = syncError?.message ? `: ${syncError.message}` : "";
-      els.sync.textContent = `保存済み・同期未確認${reason}`;
+      setEditStatus(track.id, "warning", `保存済み・同期未確認${reason}`);
+      state.detailId = track.id;
+      keepTrackInView(track.id);
       render();
+      scrollTrackIntoView(track.id);
     }
   } catch (error) {
     state.savingEditId = "";
     state.editError = error?.message ? `保存できませんでした: ${error.message}` : "保存できませんでした";
+    setEditStatus(track.id, "error", state.editError);
+    state.detailId = track.id;
     render();
+    scrollTrackIntoView(track.id);
   }
 }
 
@@ -330,6 +347,11 @@ async function reloadTracksFromApi({ status = "\u540c\u671f\u78ba\u8a8d\u4e2d", 
   els.sync.textContent = `${successPrefix} ${formatTime(new Date())}`;
   render();
   return state.tracks;
+}
+
+function setEditStatus(id, type, text) {
+  state.editStatus = { id, type, text };
+  els.sync.textContent = text;
 }
 
 function metadataFieldsFromForm(form) {
@@ -638,6 +660,7 @@ function renderTrack(track) {
   const node = els.template.content.firstElementChild.cloneNode(true);
   const expanded = track.id === state.detailId;
   const isCurrent = track.id === state.currentId;
+  node.dataset.trackId = track.id;
   node.classList.toggle("active", track.id === state.currentId);
   node.classList.toggle("expanded", expanded);
   const title = node.querySelector("h2");
@@ -662,6 +685,12 @@ function renderTrack(track) {
 
   const meta = node.querySelector(".track-meta");
   meta.textContent = [track.version, track.displayDate].filter(Boolean).join(" · ");
+
+  if (state.editStatus?.id === track.id && !expanded) {
+    const status = renderEditStatus();
+    status.classList.add("card-edit-status");
+    node.append(status);
+  }
 
   const play = node.querySelector(".play-button");
   const favorite = node.querySelector(".favorite-button");
@@ -689,6 +718,10 @@ function renderInlineDetail(track) {
   const detail = document.createElement("div");
   detail.className = "inline-detail";
   detail.addEventListener("click", (event) => event.stopPropagation());
+
+  if (state.editStatus?.id === track.id) {
+    detail.append(renderEditStatus());
+  }
 
   const singFacts = [
     ["\u6700\u9ad8\u97f3", track.highestNote],
@@ -774,6 +807,13 @@ function makeInlineSection(title) {
   heading.textContent = title;
   section.append(heading);
   return section;
+}
+
+function renderEditStatus() {
+  const status = document.createElement("p");
+  status.className = `edit-sync-status ${state.editStatus?.type || "info"}`;
+  status.textContent = state.editStatus?.text || "";
+  return status;
 }
 
 function renderMetadataEditor(track) {
@@ -1268,6 +1308,49 @@ function playlistMemberships(trackId) {
 function toggleDetail(id) {
   state.detailId = state.detailId === id ? "" : id;
   render();
+}
+
+function keepTrackInView(id) {
+  if (!id) return;
+  state.detailId = id;
+
+  let tracks = filterTracks();
+  if (!tracks.some((track) => track.id === id)) {
+    els.search.value = "";
+    state.query = "";
+    state.tag = "";
+    if (!playlistContainsTrack(state.view, id)) {
+      state.view = "all";
+      els.view.value = "all";
+    }
+    updateClearSearchButton();
+    renderPlaylistOptions();
+    tracks = filterTracks();
+  }
+
+  const index = tracks.findIndex((track) => track.id === id);
+  if (index >= 0) {
+    state.page = Math.floor(index / PAGE_SIZE) + 1;
+  }
+}
+
+function playlistContainsTrack(view, trackId) {
+  if (["all", "latest10", "favorites", "recentlyPlayed"].includes(view)) {
+    if (view === "favorites") return state.favorites.has(trackId);
+    if (view === "recentlyPlayed") return state.recent.includes(trackId);
+    return true;
+  }
+  const playlist = state.playlists.find((item) => item.id === view);
+  return Boolean(playlist?.trackIds.includes(trackId));
+}
+
+function scrollTrackIntoView(id) {
+  window.setTimeout(() => {
+    document.querySelector(`[data-track-id="${CSS.escape(id)}"]`)?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+  }, 50);
 }
 
 function moveDetail(direction) {
