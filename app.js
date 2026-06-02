@@ -476,39 +476,52 @@ function renderInlineDetail(track) {
   detail.className = "inline-detail";
   detail.addEventListener("click", (event) => event.stopPropagation());
 
+  const singFacts = [
+    ["\u6700\u9ad8\u97f3", track.highestNote],
+    ["\u30ad\u30fc", track.key !== "" ? track.key : ""],
+    ["\u30d0\u30fc\u30b8\u30e7\u30f3", track.version],
+  ].filter(([, value]) => value);
+  if (singFacts.length) {
+    const section = makeInlineSection("\u6b4c\u3046\u5224\u65ad");
+    const grid = document.createElement("div");
+    grid.className = "inline-info-grid";
+    singFacts.forEach(([label, value]) => grid.append(makeInfoCell(label, value)));
+    section.append(grid);
+    detail.append(section);
+  }
+
+  if (track.genreTags.length || track.category) {
+    const section = makeInlineSection("\u5206\u985e");
+    const facts = document.createElement("div");
+    facts.className = "inline-facts";
+    [track.category, ...track.genreTags].filter(Boolean).forEach((item) => facts.append(makeFact(item)));
+    section.append(facts);
+    detail.append(section);
+  }
+
+  const memoSection = makeInlineSection("\u30e1\u30e2");
   const memo = document.createElement("p");
   memo.className = "inline-memo";
   memo.textContent = track.memo || "\u30e1\u30e2\u306a\u3057";
-  detail.append(memo);
+  memoSection.append(memo);
+  detail.append(memoSection);
 
-  const factsSection = document.createElement("div");
-  factsSection.className = "inline-section";
-  const factsTitle = document.createElement("span");
-  factsTitle.className = "inline-section-title";
-  factsTitle.textContent = "\u66f2\u30c7\u30fc\u30bf";
-  const facts = document.createElement("div");
-  facts.className = "inline-facts";
-  [
-    track.highestNote,
-    track.key !== "" && `key ${track.key}`,
-    track.version,
-    ...track.genreTags,
-    track.fileName,
-  ].filter(Boolean).forEach((item) => facts.append(makeFact(item)));
-  factsSection.append(factsTitle, facts);
-  detail.append(factsSection);
+  if (track.fileName || track.displayDate) {
+    const section = makeInlineSection("\u7ba1\u7406\u60c5\u5831");
+    const admin = document.createElement("p");
+    admin.className = "inline-admin";
+    admin.textContent = [track.fileName, track.displayDate].filter(Boolean).join(" \u00b7 ");
+    section.append(admin);
+    detail.append(section);
+  }
 
   const memberships = playlistMemberships(track.id);
   if (memberships.length) {
-    const memberSection = document.createElement("div");
-    memberSection.className = "inline-section";
-    const memberTitle = document.createElement("span");
-    memberTitle.className = "inline-section-title";
-    memberTitle.textContent = "\u5165\u3063\u3066\u3044\u308b\u30ea\u30b9\u30c8";
+    const memberSection = makeInlineSection("\u5165\u3063\u3066\u3044\u308b\u30ea\u30b9\u30c8");
     const memberWrap = document.createElement("div");
     memberWrap.className = "inline-memberships";
     memberships.forEach((playlist) => memberWrap.append(makeMembershipChip(track.id, playlist)));
-    memberSection.append(memberTitle, memberWrap);
+    memberSection.append(memberWrap);
     detail.append(memberSection);
   }
 
@@ -529,6 +542,29 @@ function renderInlineDetail(track) {
   detail.append(actions);
 
   return detail;
+}
+
+function makeInlineSection(title) {
+  const section = document.createElement("div");
+  section.className = "inline-section";
+  const heading = document.createElement("span");
+  heading.className = "inline-section-title";
+  heading.textContent = title;
+  section.append(heading);
+  return section;
+}
+
+function makeInfoCell(label, value) {
+  const cell = document.createElement("span");
+  cell.className = "inline-info-cell";
+  const labelNode = document.createElement("span");
+  labelNode.className = "inline-info-label";
+  labelNode.textContent = label;
+  const valueNode = document.createElement("strong");
+  valueNode.className = "inline-info-value";
+  valueNode.textContent = value;
+  cell.append(labelNode, valueNode);
+  return cell;
 }
 
 function makeFact(text) {

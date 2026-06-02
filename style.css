@@ -530,6 +530,35 @@ h1 {
   gap: 7px;
 }
 
+.inline-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.inline-info-cell {
+  min-width: 0;
+  padding: 9px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.inline-info-label {
+  display: block;
+  margin-bottom: 3px;
+  color: rgba(243, 238, 240, 0.52);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.inline-info-value {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
 .inline-section {
   display: grid;
   gap: 7px;
@@ -652,6 +681,14 @@ h1 {
   backdrop-filter: blur(18px);
   box-shadow: 0 -16px 38px rgba(0, 0, 0, 0.58);
   z-index: 20;
+}
+
+.inline-admin {
+  margin: 0;
+  color: rgba(243, 238, 240, 0.5);
+  font-size: 0.76rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .player-inner {
