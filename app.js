@@ -8,6 +8,7 @@ const SHUFFLE_KEY = "utawav.shuffle";
 const REPEAT_KEY = "utawav.repeat";
 const PLAYER_COMPACT_KEY = "utawav.playerCompact";
 const PLAYLISTS_KEY = "utawav.playlists";
+const KARAOKE_FILTER = "__karaoke_ready";
 const PAGE_SIZE = 20;
 
 const state = {
@@ -370,8 +371,9 @@ function render() {
 }
 
 function renderTags() {
-  const tags = [...new Set(state.tracks.flatMap((track) => track.tags))].slice(0, 30);
+  const tags = [...new Set(state.tracks.flatMap((track) => track.genreTags))].slice(0, 30);
   els.tags.replaceChildren(makeChip("\u3059\u3079\u3066", ""));
+  els.tags.append(makeChip("\ud83c\udfa4 \u6b4c\u3048\u308b", KARAOKE_FILTER));
   for (const tag of tags) {
     els.tags.append(makeChip(tag, tag));
   }
@@ -663,7 +665,8 @@ function makeStat(text, className = "") {
 function filterTracks() {
   let tracks = [...state.tracks];
   if (state.query) tracks = tracks.filter((track) => track.searchText.includes(state.query));
-  if (state.tag) tracks = tracks.filter((track) => track.tags.includes(state.tag));
+  if (state.tag === KARAOKE_FILTER) tracks = tracks.filter((track) => track.karaokeReady);
+  else if (state.tag) tracks = tracks.filter((track) => track.genreTags.includes(state.tag));
   if (state.view === "latest10") tracks = latestTracks(tracks, 10);
   if (state.view === "favorites") tracks = tracks.filter((track) => state.favorites.has(track.id));
   if (state.view === "recentlyPlayed") tracks = tracks.filter((track) => state.recent.includes(track.id));
