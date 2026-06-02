@@ -3,6 +3,7 @@ const CACHE_KEY = "utawav.tracks";
 const FAVORITES_KEY = "utawav.favorites";
 const RECENT_KEY = "utawav.recent";
 const LAST_TRACK_KEY = "utawav.lastTrack";
+const DAILY_PICK_HISTORY_KEY = "utawav.dailyPickHistory";
 const SEARCH_HISTORY_KEY = "utawav.searchHistory";
 const EDIT_TOKEN_KEY = "utawav.editToken";
 const SHUFFLE_KEY = "utawav.shuffle";
@@ -20,6 +21,8 @@ const state = {
   tag: "",
   currentId: "",
   detailId: "",
+  dailyPickId: "",
+  dailyLineNonce: 0,
   editId: "",
   savingEditId: "",
   editError: "",
@@ -51,6 +54,7 @@ const els = {
   tags: document.querySelector("#tagChips"),
   count: document.querySelector("#countLabel"),
   sync: document.querySelector("#syncLabel"),
+  dailyPick: document.querySelector("#dailyPick"),
   list: document.querySelector("#trackList"),
   template: document.querySelector("#trackTemplate"),
   audio: document.querySelector("#audio"),
@@ -489,6 +493,7 @@ function normalizeTrack(raw, index = 0) {
 
 function render() {
   renderTags();
+  renderDailyPick();
   const tracks = filterTracks();
   const pageCount = Math.max(1, Math.ceil(tracks.length / PAGE_SIZE));
   state.page = Math.min(Math.max(1, state.page), pageCount);
@@ -522,6 +527,65 @@ function render() {
   for (const track of pageTracks) {
     els.list.append(renderTrack(track));
   }
+}
+
+function renderDailyPick() {
+  if (!els.dailyPick) return;
+  const track = getDailyPick();
+  if (!track) {
+    els.dailyPick.hidden = true;
+    els.dailyPick.replaceChildren();
+    return;
+  }
+
+  els.dailyPick.hidden = false;
+  const avatar = document.createElement("img");
+  avatar.className = "daily-pick-avatar";
+  avatar.src = "./icon/sak-chan-face.png";
+  avatar.alt = "sakちゃん";
+
+  const label = document.createElement("span");
+  label.className = "daily-pick-label";
+  label.textContent = "sakちゃんおすすめ";
+
+  const title = document.createElement("strong");
+  title.textContent = track.title;
+
+  const line = document.createElement("em");
+  line.textContent = sakChanLineV2(track, state.dailyLineNonce);
+
+  const meta = document.createElement("small");
+  const reasons = [];
+  if (track.karaokeReady) reasons.push("歌える");
+  if (Number(track.quality) > 0) reasons.push(starText(track.quality));
+  if (track.genreTags[0]) reasons.push(track.genreTags[0]);
+  meta.textContent = [track.artist, ...reasons].filter(Boolean).join(" · ");
+
+  const play = document.createElement("button");
+  play.type = "button";
+  play.textContent = track.id === state.currentId && state.isPlaying ? "再生中" : "聴く";
+  play.addEventListener("click", () => playDailyPick(track));
+
+  const change = document.createElement("button");
+  change.type = "button";
+  change.className = "ghost";
+  change.textContent = "別の曲";
+  change.addEventListener("click", () => {
+    state.dailyLineNonce += 1;
+    state.dailyPickId = chooseDailyPick({ rotate: true })?.id || "";
+    rememberDailyPick(state.dailyPickId);
+    render();
+  });
+
+  const text = document.createElement("div");
+  text.className = "daily-pick-text";
+  text.append(label, title, line, meta);
+
+  const actions = document.createElement("div");
+  actions.className = "daily-pick-actions";
+  actions.append(play, change);
+
+  els.dailyPick.replaceChildren(avatar, text, actions);
 }
 
 function renderTags() {
@@ -565,6 +629,182 @@ function renderSearchHistory() {
     });
     els.searchHistory.append(button);
   }
+}
+
+function getDailyPick() {
+  if (!state.tracks.length) return null;
+  const existing = state.tracks.find((track) => track.id === state.dailyPickId);
+  if (existing) return existing;
+  const pick = chooseDailyPick();
+  state.dailyPickId = pick?.id || "";
+  rememberDailyPick(state.dailyPickId);
+  return pick;
+}
+
+function chooseDailyPick({ rotate = false } = {}) {
+  const candidates = state.tracks.filter((track) => track.url);
+  if (!candidates.length) return null;
+  const recentPickIds = new Set(readArray(DAILY_PICK_HISTORY_KEY));
+  const freshCandidates = candidates.filter((track) => !recentPickIds.has(track.id));
+  const pool = freshCandidates.length ? freshCandidates : candidates;
+  const weighted = [];
+  for (const track of pool) {
+    const weight = 1 + (track.karaokeReady ? 2 : 0) + Math.min(2, Number(track.quality) || 0);
+    for (let index = 0; index < weight; index += 1) weighted.push(track);
+  }
+  const seed = randomSeed(`${rotate ? "rotate" : "open"}:${Date.now()}:${state.tracks.length}`);
+  return weighted[seed % weighted.length];
+}
+
+function rememberDailyPick(id) {
+  if (!id) return;
+  const history = [id, ...readArray(DAILY_PICK_HISTORY_KEY).filter((item) => item !== id)].slice(0, 12);
+  localStorage.setItem(DAILY_PICK_HISTORY_KEY, JSON.stringify(history));
+}
+
+function randomSeed(salt = "") {
+  if (crypto?.getRandomValues) {
+    const values = new Uint32Array(1);
+    crypto.getRandomValues(values);
+    return values[0];
+  }
+  return hashString(`${salt}:${Math.random()}`);
+}
+
+function playDailyPick(track) {
+  keepTrackInView(track.id);
+  state.detailId = track.id;
+  playTrack(track);
+  scrollTrackIntoView(track.id);
+}
+
+function sakChanLine(track) {
+  if (track.karaokeReady && track.highestNote) {
+    return `今日はこの曲、${track.highestNote}まで気持ちよくいこ。`;
+  }
+  if (track.karaokeReady) {
+    return "歌える曲だよ。声出しにも本番にもよさそう。";
+  }
+  if (Number(track.quality) >= 4) {
+    return "仕上がりよさげ。もう一回聴いてにやっとしよ。";
+  }
+  if (Number(track.retake) > 0) {
+    return "歌い直しの跡がある曲、伸びしろの匂いがする。";
+  }
+  if (track.genreTags.includes("ロック") || track.genreTags.includes("V系") || track.genreTags.includes("メタル")) {
+    return "今日はちょっと強めでいこう。";
+  }
+  if (track.memo) {
+    return "メモあり。思い出しながら聴くとよさそう。";
+  }
+  return "今日はこの曲から始めてみよ。";
+}
+
+function hashString(value) {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+  return hash;
+}
+
+function sakChanLineV2(track, nonce = 0) {
+  const groups = [];
+  const hour = new Date().getHours();
+  const day = new Date().getDay();
+  const isWeekend = day === 0 || day === 6;
+
+  if (track.karaokeReady && track.highestNote) {
+    groups.push([
+      `今日はこの曲、${track.highestNote}まで気持ちよくいこ。`,
+      `${track.highestNote}まで見えてる曲。焦らず声を乗せよ。`,
+      `高音ポイントあり。ここ、決まったらかなり気持ちいいやつ。`,
+    ]);
+  } else if (track.karaokeReady) {
+    groups.push([
+      "歌える曲だよ。声出しにも本番にもよさそう。",
+      "これは歌う準備できてる曲。ちょっと気持ち入れてこ。",
+      "マイク持ったら似合いそう。今日はこれもあり。",
+    ]);
+  }
+
+  if (Number(track.quality) >= 4) {
+    groups.push([
+      "仕上がりよさげ。もう一回聴いてにやっとしよ。",
+      "このテイク、けっこういい匂いがする。",
+      "いい感じに育ってる曲。今日は褒めていいと思う。",
+    ]);
+  }
+
+  if (Number(track.retake) > 0) {
+    groups.push([
+      "歌い直しの跡がある曲、伸びしろの匂いがする。",
+      "磨いた曲って、あとから効いてくるんだよね。",
+      "もう一度向き合った曲。そういうの、ちゃんと残ってる。",
+    ]);
+  }
+
+  if (track.genreTags.includes("ロック") || track.genreTags.includes("V系") || track.genreTags.includes("メタル")) {
+    groups.push([
+      "今日はちょっと強めでいこう。",
+      "温度高めの曲、今なら刺さるかも。",
+      "勢いを借りたい日には、こういう曲だよね。",
+    ]);
+  }
+
+  if (track.memo) {
+    groups.push([
+      "メモあり。思い出しながら聴くとよさそう。",
+      "メモを残した曲って、その時の自分がちょっといる。",
+      "ここは記録つき。聴く前に一回だけ思い出そ。",
+    ]);
+  }
+
+  if (isWeekend) {
+    groups.push([
+      "週末だし、少しだけ好きな音に甘やかされよ。",
+      "今日は時間を味方につけて聴けそう。",
+      "週末の一曲、ちょっと大事にいこ。",
+    ]);
+  }
+
+  if (hour < 5) {
+    groups.push([
+      "深い時間の曲選び、そういうのも悪くない。",
+      "夜更けには、音が少し近く感じるね。",
+    ]);
+  } else if (hour < 11) {
+    groups.push([
+      "朝の一曲、声と気分をゆっくり起こそ。",
+      "今日はここから始めてみよ。",
+    ]);
+  } else if (hour < 17) {
+    groups.push([
+      "昼のテンションにちょうどよさそう。",
+      "今の時間なら、軽く聴いてもちゃんと残りそう。",
+    ]);
+  } else if (hour < 22) {
+    groups.push([
+      "夜に似合う曲かも。少しだけ浸ろ。",
+      "今日の終わりに、これを置いてみるのもいいね。",
+    ]);
+  } else {
+    groups.push([
+      "寝る前なら、気持ちだけ強めにしすぎないでいこ。",
+      "夜の余韻に合いそう。音量はやさしめで。",
+    ]);
+  }
+
+  groups.push([
+    "今日はこの曲から始めてみよ。",
+    "なんとなく、今これが呼んでる気がする。",
+    "迷ったらこれ。sakちゃんセンサー的にはあり。",
+  ]);
+
+  const lines = groups.flat();
+  const dayKey = new Date().toLocaleDateString("ja-JP");
+  const seed = hashString(`${track.id}:${dayKey}:${nonce}:${track.title}`);
+  return lines[seed % lines.length];
 }
 
 function updateClearSearchButton() {
@@ -662,12 +902,23 @@ function renderTrack(track) {
   const isCurrent = track.id === state.currentId;
   node.dataset.trackId = track.id;
   node.classList.toggle("active", track.id === state.currentId);
+  node.classList.toggle("is-playing", track.id === state.currentId && state.isPlaying);
   node.classList.toggle("expanded", expanded);
   const title = node.querySelector("h2");
   const titleText = document.createElement("span");
   titleText.className = "title-text";
   titleText.textContent = track.title;
   title.replaceChildren(titleText);
+  if (track.id === state.currentId) {
+    const now = document.createElement("span");
+    now.className = "now-indicator";
+    now.setAttribute("aria-label", state.isPlaying ? "再生中" : "選択中");
+    now.title = state.isPlaying ? "再生中" : "選択中";
+    for (let index = 0; index < 3; index += 1) {
+      now.append(document.createElement("i"));
+    }
+    title.prepend(now);
+  }
   if (track.karaokeReady) {
     const karaokeIcon = document.createElement("span");
     karaokeIcon.className = "karaoke-icon";
@@ -1194,6 +1445,7 @@ function updatePlaybackStatusDisplay() {
 
 function updatePlayerControls() {
   const isPaused = els.audio.paused || !state.isPlaying;
+  els.player.classList.toggle("is-playing", !isPaused);
   els.playerPlay.textContent = "";
   els.playerPlay.classList.toggle("is-playing", !isPaused);
   els.playerPlay.setAttribute("aria-label", isPaused ? "\u518d\u751f" : "\u4e00\u6642\u505c\u6b62");

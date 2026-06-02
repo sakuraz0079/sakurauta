@@ -410,6 +410,96 @@ h1 {
   font-size: 0.82rem;
 }
 
+.daily-pick {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0 12px;
+  padding: 12px;
+  border: 1px solid rgba(239, 23, 68, 0.26);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(239, 23, 68, 0.16), rgba(18, 107, 90, 0.12)),
+    rgba(255, 255, 255, 0.05);
+}
+
+.daily-pick-avatar {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.28));
+}
+
+.daily-pick-text {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.daily-pick-label {
+  color: #ffb7c5;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.daily-pick strong,
+.daily-pick small,
+.daily-pick em {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.daily-pick strong {
+  color: var(--ink);
+  font-size: 0.98rem;
+  line-height: 1.25;
+}
+
+.daily-pick small {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.daily-pick em {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+  margin: 2px 0;
+  padding: 5px 8px;
+  border: 1px solid rgba(255, 205, 91, 0.28);
+  border-radius: 8px;
+  background: rgba(255, 205, 91, 0.1);
+  color: #ffe1a1;
+  font-size: 0.78rem;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.daily-pick-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.daily-pick button {
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid rgba(239, 23, 68, 0.48);
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.daily-pick button.ghost {
+  border-color: var(--line);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink);
+}
+
 .track-list {
   display: grid;
   gap: 10px;
@@ -433,6 +523,16 @@ h1 {
   border-color: rgba(239, 23, 68, 0.72);
   background: linear-gradient(90deg, rgba(239, 23, 68, 0.22), rgba(17, 17, 19, 0.98));
   box-shadow: inset 4px 0 0 var(--accent);
+}
+
+.track-card.is-playing {
+  border-color: rgba(255, 205, 91, 0.42);
+  background:
+    linear-gradient(90deg, rgba(239, 23, 68, 0.26), rgba(18, 107, 90, 0.16)),
+    rgba(17, 17, 19, 0.98);
+  box-shadow:
+    inset 4px 0 0 var(--accent),
+    0 12px 24px rgba(239, 23, 68, 0.18);
 }
 
 .track-card.expanded {
@@ -472,6 +572,48 @@ h1 {
 
 .title-text {
   min-width: 0;
+}
+
+.now-indicator {
+  display: inline-grid;
+  grid-template-columns: repeat(3, 3px);
+  align-items: end;
+  gap: 2px;
+  flex: 0 0 auto;
+  width: 15px;
+  height: 16px;
+}
+
+.now-indicator i {
+  display: block;
+  width: 3px;
+  height: 7px;
+  border-radius: 999px;
+  background: #ffd166;
+  opacity: 0.85;
+}
+
+.track-card.is-playing .now-indicator i {
+  animation: nowPlayingBars 780ms ease-in-out infinite;
+}
+
+.track-card.is-playing .now-indicator i:nth-child(2) {
+  animation-delay: 120ms;
+}
+
+.track-card.is-playing .now-indicator i:nth-child(3) {
+  animation-delay: 240ms;
+}
+
+@keyframes nowPlayingBars {
+  0%,
+  100% {
+    height: 6px;
+  }
+
+  50% {
+    height: 15px;
+  }
 }
 
 .karaoke-icon {
@@ -982,11 +1124,23 @@ h1 {
   padding: 14px 16px max(16px, env(safe-area-inset-bottom));
   border-top: 1px solid var(--line);
   background:
-    radial-gradient(circle at 50% 0, rgba(239, 23, 68, 0.16), transparent 220px),
+    radial-gradient(ellipse at 50% -18%, rgba(255, 205, 91, 0.18), transparent 220px),
+    linear-gradient(135deg, rgba(239, 23, 68, 0.18), rgba(18, 107, 90, 0.12)),
     rgba(8, 8, 9, 0.98);
   backdrop-filter: blur(18px);
   box-shadow: 0 -16px 38px rgba(0, 0, 0, 0.58);
   z-index: 20;
+}
+
+.player.is-playing {
+  border-top-color: rgba(255, 205, 91, 0.32);
+  background:
+    radial-gradient(ellipse at 50% -18%, rgba(255, 205, 91, 0.24), transparent 230px),
+    linear-gradient(135deg, rgba(239, 23, 68, 0.24), rgba(18, 107, 90, 0.16)),
+    rgba(8, 8, 9, 0.98);
+  box-shadow:
+    0 -18px 44px rgba(0, 0, 0, 0.62),
+    0 -10px 34px rgba(239, 23, 68, 0.14);
 }
 
 .inline-admin {
@@ -1001,6 +1155,24 @@ h1 {
   position: relative;
   width: min(100%, 760px);
   margin: 0 auto;
+}
+
+.player-inner::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  width: min(58%, 320px);
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(255, 205, 91, 0.7), rgba(239, 23, 68, 0.68), transparent);
+  opacity: 0.45;
+  transform: translateX(-50%);
+}
+
+.player.is-playing .player-inner::before {
+  opacity: 0.9;
+  animation: playerStageLine 1800ms ease-in-out infinite;
 }
 
 .compact-player-button {
@@ -1068,6 +1240,11 @@ h1 {
   font-weight: 800;
 }
 
+.player.is-playing .now-playing p {
+  color: #fff;
+  text-shadow: 0 0 18px rgba(255, 205, 91, 0.2);
+}
+
 .now-playing span {
   color: var(--muted);
   font-size: 0.82rem;
@@ -1117,9 +1294,17 @@ audio {
   border: 1px solid var(--line);
   border-radius: 8px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), transparent),
+    linear-gradient(90deg, rgba(239, 23, 68, 0.12), rgba(18, 107, 90, 0.1)),
     #0e0e10;
   overflow: hidden;
+}
+
+.player.is-playing .wave-wrap {
+  border-color: rgba(255, 205, 91, 0.28);
+  box-shadow:
+    inset 0 0 22px rgba(255, 205, 91, 0.05),
+    0 10px 28px rgba(0, 0, 0, 0.2);
 }
 
 #waveCanvas {
@@ -1182,6 +1367,12 @@ audio {
   box-shadow: 0 12px 30px rgba(239, 23, 68, 0.38);
 }
 
+.player.is-playing .player-controls .main-play {
+  box-shadow:
+    0 14px 34px rgba(239, 23, 68, 0.45),
+    0 0 0 7px rgba(239, 23, 68, 0.12);
+}
+
 .player-controls .main-play::before,
 .player-controls .main-play::after {
   content: "";
@@ -1222,6 +1413,17 @@ audio {
   border-color: var(--accent);
   background: var(--accent);
   color: #fff;
+}
+
+@keyframes playerStageLine {
+  0%,
+  100% {
+    transform: translateX(-50%) scaleX(0.88);
+  }
+
+  50% {
+    transform: translateX(-50%) scaleX(1);
+  }
 }
 
 .player.compact {
@@ -1418,6 +1620,21 @@ audio {
 }
 
 @media (max-width: 430px) {
+  .daily-pick {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .daily-pick-actions {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .daily-pick-avatar {
+    width: 42px;
+    height: 42px;
+  }
+
   .inline-edit-form {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
