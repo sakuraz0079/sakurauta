@@ -442,17 +442,10 @@ function renderTrack(track) {
 
   const stats = node.querySelector(".track-stats");
   stats.append(makeStat(starText(track.quality), "stars"));
-  stats.append(makeStat(track.displayDate || "-", "date"));
   if (Number(track.retake) > 0) stats.append(makeStat(`Re ${track.retake}`, "retake"));
 
   const meta = node.querySelector(".track-meta");
-  const metaItems = [track.version, ...track.genreTags].filter(Boolean);
-  for (const item of metaItems.slice(0, 4)) {
-    const pill = document.createElement("span");
-    pill.className = "meta-pill";
-    pill.textContent = item;
-    meta.append(pill);
-  }
+  meta.textContent = [track.version, track.displayDate].filter(Boolean).join(" · ");
 
   const play = node.querySelector(".play-button");
   const favorite = node.querySelector(".favorite-button");
