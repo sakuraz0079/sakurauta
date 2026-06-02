@@ -426,14 +426,24 @@ function renderTrack(track) {
   const isCurrent = track.id === state.currentId;
   node.classList.toggle("active", track.id === state.currentId);
   node.classList.toggle("expanded", expanded);
-  node.querySelector("h2").textContent = track.title;
+  const title = node.querySelector("h2");
+  const titleText = document.createElement("span");
+  titleText.className = "title-text";
+  titleText.textContent = track.title;
+  title.replaceChildren(titleText);
+  if (track.karaokeReady) {
+    const karaokeIcon = document.createElement("span");
+    karaokeIcon.className = "karaoke-icon";
+    karaokeIcon.setAttribute("aria-label", "\u6b4c\u3048\u308b");
+    karaokeIcon.title = "\u6b4c\u3048\u308b";
+    title.append(karaokeIcon);
+  }
   node.querySelector("p").textContent = track.artist || "\u30a2\u30fc\u30c6\u30a3\u30b9\u30c8\u672a\u8a2d\u5b9a";
 
   const stats = node.querySelector(".track-stats");
   stats.append(makeStat(starText(track.quality), "stars"));
-  stats.append(makeStat(track.displayDate || "-"));
-  if (Number(track.retake) > 0) stats.append(makeStat(`Re ${track.retake}`));
-  if (track.karaokeReady) stats.append(makeStat("\u6b4c\u3048\u308b", "ready"));
+  stats.append(makeStat(track.displayDate || "-", "date"));
+  if (Number(track.retake) > 0) stats.append(makeStat(`Re ${track.retake}`, "retake"));
 
   const meta = node.querySelector(".track-meta");
   const metaItems = [track.version, ...track.genreTags].filter(Boolean);

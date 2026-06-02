@@ -1,9 +1,9 @@
-const CACHE_NAME = "sak-uta-app-v26";
+const CACHE_NAME = "sak-uta-app-v27";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./style.css?v=20260602-07",
-  "./app.js?v=20260602-07",
+  "./style.css?v=20260602-08",
+  "./app.js?v=20260602-08",
   "./manifest.webmanifest",
   "./icon/IMG_2956.png",
   "./icon/IMG_2957.png",
