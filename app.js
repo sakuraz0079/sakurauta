@@ -3,6 +3,7 @@ const CACHE_KEY = "utawav.tracks";
 const FAVORITES_KEY = "utawav.favorites";
 const RECENT_KEY = "utawav.recent";
 const LAST_TRACK_KEY = "utawav.lastTrack";
+const SEARCH_HISTORY_KEY = "utawav.searchHistory";
 const SHUFFLE_KEY = "utawav.shuffle";
 const REPEAT_KEY = "utawav.repeat";
 const PLAYER_COMPACT_KEY = "utawav.playerCompact";
@@ -28,6 +29,7 @@ const state = {
   page: 1,
   favorites: readSet(FAVORITES_KEY),
   recent: readArray(RECENT_KEY),
+  searchHistory: readArray(SEARCH_HISTORY_KEY),
   playlists: readPlaylists(),
 };
 
@@ -35,6 +37,7 @@ const els = {
   appShell: document.querySelector(".app-shell"),
   player: document.querySelector("#player"),
   search: document.querySelector("#searchInput"),
+  searchHistory: document.querySelector("#searchHistoryChips"),
   sort: document.querySelector("#sortSelect"),
   view: document.querySelector("#viewSelect"),
   tags: document.querySelector("#tagChips"),
@@ -72,6 +75,7 @@ init();
 
 async function init() {
   bindEvents();
+  renderSearchHistory();
   renderPlaylistOptions();
   await loadTracks();
   restoreLastTrack();
@@ -89,6 +93,13 @@ function bindEvents() {
     state.page = 1;
     render();
   });
+  els.search.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      commitSearchQuery();
+    }
+  });
+  els.search.addEventListener("blur", commitSearchQuery);
 
   els.sort.addEventListener("change", () => {
     state.sort = els.sort.value;
@@ -351,6 +362,33 @@ function renderTags() {
   els.tags.replaceChildren(makeChip("\u3059\u3079\u3066", ""));
   for (const tag of tags) {
     els.tags.append(makeChip(tag, tag));
+  }
+}
+
+function commitSearchQuery() {
+  const query = els.search.value.trim();
+  if (!query) return;
+  state.searchHistory = [query, ...state.searchHistory.filter((item) => item.toLowerCase() !== query.toLowerCase())].slice(0, 8);
+  localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(state.searchHistory));
+  renderSearchHistory();
+}
+
+function renderSearchHistory() {
+  if (!els.searchHistory) return;
+  els.searchHistory.replaceChildren();
+  els.searchHistory.hidden = state.searchHistory.length === 0;
+  for (const query of state.searchHistory) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = query;
+    button.addEventListener("click", () => {
+      els.search.value = query;
+      state.query = query.toLowerCase();
+      state.page = 1;
+      commitSearchQuery();
+      render();
+    });
+    els.searchHistory.append(button);
   }
 }
 
