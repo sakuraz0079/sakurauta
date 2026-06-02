@@ -11,7 +11,7 @@
     <link rel="icon" href="./icon-192.png" type="image/png">
     <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
     <link rel="manifest" href="./manifest.webmanifest">
-    <link rel="stylesheet" href="./style.css?v=20260602-15">
+    <link rel="stylesheet" href="./style.css?v=20260602-16">
   </head>
   <body>
     <div class="app-shell">
@@ -25,7 +25,7 @@
           <div class="search-line">
             <div class="search-box">
               <span>⌕</span>
-              <input id="searchInput" type="search" autocomplete="off" placeholder="曲名、アーティスト、メモで検索" aria-label="検索">
+              <input id="searchInput" type="search" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="search" placeholder="曲名、アーティスト、メモで検索" aria-label="検索">
               <button id="clearSearchButton" class="clear-search-button" type="button" aria-label="検索をクリア" title="検索をクリア" hidden>×</button>
             </div>
             <label class="sort-mini">
@@ -123,6 +123,6 @@
       </article>
     </template>
 
-    <script src="./app.js?v=20260602-15" type="module"></script>
+    <script src="./app.js?v=20260602-16" type="module"></script>
   </body>
 </html>
