@@ -478,8 +478,7 @@ function renderInlineDetail(track) {
 
   const singFacts = [
     ["\u6700\u9ad8\u97f3", track.highestNote],
-    ["\u30ad\u30fc", track.key !== "" ? track.key : ""],
-    ["\u30d0\u30fc\u30b8\u30e7\u30f3", track.version],
+    ["\u30ad\u30fc", track.key !== "" ? track.key : "\u00b10"],
   ].filter(([, value]) => value);
   if (singFacts.length) {
     const section = makeInlineSection("\u6b4c\u3046\u5224\u65ad");
