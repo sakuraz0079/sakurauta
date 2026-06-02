@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>sak_Uta mic icon preview</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0d0d0f;
+        --panel: #111113;
+        --line: rgba(255, 255, 255, 0.14);
+        --ink: #f3eef0;
+        --muted: rgba(243, 238, 240, 0.62);
+        --accent: #ef1744;
+        --mic: #ffb7c5;
+        --mic-dark: #d85c76;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 20px;
+      }
+
+      main {
+        display: grid;
+        gap: 20px;
+        max-width: 680px;
+        margin: 0 auto;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 1.1rem;
+      }
+
+      p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.86rem;
+        line-height: 1.6;
+      }
+
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 16px;
+      }
+
+      .card-line {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 8px;
+        background: rgba(17, 17, 19, 0.92);
+        font-weight: 800;
+      }
+
+      .preview-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .box {
+        display: grid;
+        place-items: center;
+        min-height: 150px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        background: #171719;
+      }
+
+      .label {
+        margin-bottom: 8px;
+        color: var(--muted);
+        font-size: 0.78rem;
+      }
+
+      .mic {
+        position: relative;
+        flex: 0 0 auto;
+        width: 22px;
+        height: 22px;
+        transform: rotate(-34deg);
+      }
+
+      .mic::before,
+      .mic::after {
+        content: "";
+        position: absolute;
+        display: block;
+      }
+
+      .mic::before {
+        top: 1px;
+        left: 2px;
+        width: 13px;
+        height: 12px;
+        border: 1.5px solid var(--mic);
+        border-radius: 999px 999px 7px 7px;
+        background:
+          linear-gradient(90deg, transparent 3px, rgba(255, 183, 197, 0.55) 3px 4px, transparent 4px 8px, rgba(255, 183, 197, 0.55) 8px 9px, transparent 9px),
+          linear-gradient(0deg, transparent 3px, rgba(255, 183, 197, 0.45) 3px 4px, transparent 4px 8px, rgba(255, 183, 197, 0.45) 8px 9px, transparent 9px),
+          rgba(255, 183, 197, 0.08);
+        box-shadow: 0 0 0 3px rgba(239, 23, 68, 0.12);
+      }
+
+      .mic::after {
+        top: 12px;
+        left: 9px;
+        width: 5px;
+        height: 10px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--mic), var(--mic-dark));
+        box-shadow: -1px -2px 0 var(--mic);
+      }
+
+      .large .mic {
+        transform: rotate(-34deg) scale(5);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>SM58風マイクアイコン案</h1>
+        <p>一覧カードに置く実サイズと、形状確認用の拡大表示です。</p>
+      </header>
+
+      <section class="panel">
+        <p class="label">カード内想定</p>
+        <div class="card-line">
+          <span>曲名サンプル</span>
+          <span class="mic" aria-label="歌える"></span>
+        </div>
+      </section>
+
+      <section class="preview-grid">
+        <div>
+          <p class="label">実サイズ</p>
+          <div class="box">
+            <span class="mic" aria-label="歌える"></span>
+          </div>
+        </div>
+        <div>
+          <p class="label">拡大</p>
+          <div class="box large">
+            <span class="mic" aria-label="歌える"></span>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
