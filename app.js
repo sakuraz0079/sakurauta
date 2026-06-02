@@ -6,7 +6,6 @@ const LAST_TRACK_KEY = "utawav.lastTrack";
 const SEARCH_HISTORY_KEY = "utawav.searchHistory";
 const SHUFFLE_KEY = "utawav.shuffle";
 const REPEAT_KEY = "utawav.repeat";
-const PLAYER_COMPACT_KEY = "utawav.playerCompact";
 const PLAYLISTS_KEY = "utawav.playlists";
 const KARAOKE_FILTER = "__karaoke_ready";
 const PAGE_SIZE = 20;
@@ -25,7 +24,8 @@ const state = {
   playbackMessage: "",
   shuffle: localStorage.getItem(SHUFFLE_KEY) === "true",
   repeat: localStorage.getItem(REPEAT_KEY) === "true",
-  compactPlayer: localStorage.getItem(PLAYER_COMPACT_KEY) === "true",
+  compactPlayer: true,
+  playerManualCompact: false,
   waveform: [],
   page: 1,
   favorites: readSet(FAVORITES_KEY),
@@ -149,7 +149,7 @@ function bindEvents() {
   els.playerPlay.addEventListener("click", togglePlayback);
   els.compactPlayer.addEventListener("click", () => {
     state.compactPlayer = !state.compactPlayer;
-    localStorage.setItem(PLAYER_COMPACT_KEY, String(state.compactPlayer));
+    state.playerManualCompact = true;
     updatePlayerCompact();
   });
   els.repeat.addEventListener("click", () => {
@@ -190,6 +190,7 @@ function bindEvents() {
   els.audio.addEventListener("playing", () => setPlaybackStatus("playing", ""));
   els.audio.addEventListener("play", () => {
     state.isPlaying = true;
+    expandPlayerForPlayback();
     updatePlayerControls();
     render();
   });
@@ -864,6 +865,12 @@ function updatePlayerCompact() {
   els.compactPlayer.setAttribute("title", state.compactPlayer ? "\u518d\u751f\u30a8\u30ea\u30a2\u3092\u5927\u304d\u304f\u3059\u308b" : "\u518d\u751f\u30a8\u30ea\u30a2\u3092\u5c0f\u3055\u304f\u3059\u308b");
 }
 
+function expandPlayerForPlayback() {
+  if (state.playerManualCompact || !state.compactPlayer) return;
+  state.compactPlayer = false;
+  updatePlayerCompact();
+}
+
 function updateProgress() {
   const duration = els.audio.duration;
   const current = els.audio.currentTime;
@@ -973,7 +980,7 @@ function pick(source, keys) {
 function normalizeTags(value) {
   if (Array.isArray(value)) return value.map(String).map((tag) => tag.trim()).filter(Boolean);
   return String(value || "")
-    .split(/[,\s/]+/)
+    .split(/[,\s/、，]+/)
     .map((tag) => tag.trim())
     .filter(Boolean);
 }
