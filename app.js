@@ -1,4 +1,4 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbyh4854enNZlGObSJu3qc3_t3MqD6lO9afRWbWLkjNcQpfCu1P8GXrQPCyPjbdZFzy3RQ/exec";
+﻿const API_URL = "https://script.google.com/macros/s/AKfycbyh4854enNZlGObSJu3qc3_t3MqD6lO9afRWbWLkjNcQpfCu1P8GXrQPCyPjbdZFzy3RQ/exec";
 const CACHE_KEY = "utawav.tracks";
 const FAVORITES_KEY = "utawav.favorites";
 const RECENT_KEY = "utawav.recent";
@@ -12,6 +12,7 @@ const PLAYLISTS_KEY = "utawav.playlists";
 const KARAOKE_FILTER = "__karaoke_ready";
 const PAGE_SIZE = 20;
 const EXCLUDED_GENRE_TAGS = new Set(["mastering"]);
+const PARAMS = new URLSearchParams(location.search);
 
 const state = {
   tracks: [],
@@ -27,6 +28,10 @@ const state = {
   savingEditId: "",
   editError: "",
   editStatus: null,
+  addOpen: PARAMS.has("add"),
+  addStatus: null,
+  addError: "",
+  addingTrack: false,
   isPlaying: false,
   isSeeking: false,
   playbackStatus: "idle",
@@ -73,6 +78,8 @@ const els = {
   repeat: document.querySelector("#repeatButton"),
   shuffle: document.querySelector("#shuffleButton"),
   refresh: document.querySelector("#refreshButton"),
+  addTrack: document.querySelector("#addTrackButton"),
+  addTrackPanel: document.querySelector("#addTrackPanel"),
   newPlaylist: document.querySelector("#newPlaylistButton"),
   deletePlaylist: document.querySelector("#deletePlaylistButton"),
   playlistChips: document.querySelector("#playlistChips"),
@@ -140,6 +147,12 @@ function bindEvents() {
   });
 
   els.refresh.addEventListener("click", () => loadTracks({ force: true }));
+  els.addTrack.addEventListener("click", () => {
+    state.addOpen = !state.addOpen;
+    state.addError = "";
+    state.addStatus = null;
+    render();
+  });
   els.newPlaylist.addEventListener("click", showPlaylistForm);
   els.deletePlaylist.addEventListener("click", deleteCurrentPlaylist);
   els.playlistForm.addEventListener("submit", (event) => {
@@ -223,7 +236,7 @@ function bindEvents() {
 }
 
 async function loadTracks({ force = false } = {}) {
-  if (new URLSearchParams(location.search).has("demo")) {
+  if (PARAMS.has("demo")) {
     state.tracks = demoTracks();
     els.sync.textContent = "\u30c7\u30e2";
     render();
@@ -338,6 +351,59 @@ async function submitMetadataEdit(track, form) {
   }
 }
 
+async function submitTrackAdd(form) {
+  document.activeElement?.blur?.();
+  const fields = addTrackFieldsFromForm(form);
+  if (!fields.title) {
+    state.addError = "曲名を入力してください";
+    render();
+    return;
+  }
+  if (!fields.url) {
+    state.addError = "WAV URLを入力してください";
+    render();
+    return;
+  }
+
+  state.addingTrack = true;
+  state.addError = "";
+  state.addStatus = { type: "saving", text: "曲を追加中" };
+  els.sync.textContent = "曲を追加中";
+  render();
+
+  try {
+    const result = await saveNewTrack(fields);
+    state.addStatus = { type: "syncing", text: result?.opaque ? "追加リクエスト送信・同期確認中" : "追加・同期確認中" };
+    els.sync.textContent = state.addStatus.text;
+    render();
+
+    const tracks = await reloadTracksFromApi({ status: "追加の同期確認中", successPrefix: "追加・同期" });
+    const addedId = result?.data?.id || result?.id;
+    const added = tracks.find((track) => track.id === addedId)
+      || tracks.find((track) => track.url === fields.url)
+      || tracks.find((track) => track.title === fields.title && track.artist === fields.artist);
+
+    const mode = result?.data?.mode || result?.mode;
+    const doneLabel = mode === "updated" ? "更新" : "追加";
+    state.addingTrack = false;
+    state.addOpen = false;
+    state.addStatus = { type: "success", text: `${doneLabel}完了 ${formatTime(new Date())}` };
+    if (added) {
+      state.detailId = added.id;
+      state.page = pageForTrack(added.id, filterTracks());
+      keepTrackInView(added.id);
+    }
+    render();
+    if (added) scrollTrackIntoView(added.id);
+  } catch (error) {
+    state.addingTrack = false;
+    state.addError = error?.message ? `追加できませんでした: ${error.message}` : "追加できませんでした";
+    state.addStatus = { type: "error", text: state.addError };
+    els.sync.textContent = state.addError;
+    render();
+  }
+}
+
 async function reloadTracksFromApi({ status = "\u540c\u671f\u78ba\u8a8d\u4e2d", successPrefix = "\u540c\u671f" } = {}) {
   els.sync.textContent = status;
   const payload = await fetchApiPayload();
@@ -372,8 +438,30 @@ function metadataFieldsFromForm(form) {
   };
 }
 
+function addTrackFieldsFromForm(form) {
+  const data = new FormData(form);
+  const retake = Math.max(0, Number.parseInt(data.get("retake_count") || "0", 10) || 0);
+  const url = String(data.get("url") || "").trim();
+  const category = String(data.get("category") || "").trim();
+  return {
+    title: String(data.get("title") || "").trim(),
+    artist: String(data.get("artist") || "").trim(),
+    url,
+    fileName: String(data.get("fileName") || "").trim() || fileNameFromUrl(url),
+    category,
+    version: category,
+    tags: String(data.get("tags") || "").trim(),
+    karaoke_ready: data.has("karaoke_ready"),
+    highest_note: String(data.get("highest_note") || "").trim(),
+    key: String(data.get("key") || "").trim() || "±0",
+    quality_score: String(data.get("quality_score") || "").trim(),
+    retake_count: retake,
+    memo: String(data.get("memo") || "").trim(),
+  };
+}
+
 async function saveTrackMetadata(id, fields) {
-  if (new URLSearchParams(location.search).has("demo")) {
+  if (PARAMS.has("demo")) {
     return { ok: true, demo: true };
   }
 
@@ -392,6 +480,33 @@ async function saveTrackMetadata(id, fields) {
     const text = await response.text();
     const payload = text ? JSON.parse(text) : {};
     if (payload?.ok === false) throw new Error(payload.error || "API save error");
+    return payload;
+  } catch (error) {
+    if (!(error instanceof TypeError)) throw error;
+    await fetch(API_URL, { method: "POST", mode: "no-cors", body });
+    return { ok: true, opaque: true };
+  }
+}
+
+async function saveNewTrack(fields) {
+  if (PARAMS.has("demo")) {
+    return { ok: true, demo: true, data: { id: `demo-${Date.now()}` } };
+  }
+
+  const body = new URLSearchParams({
+    action: "addTrack",
+    payload: JSON.stringify(fields),
+  });
+  const editToken = getEditToken();
+  if (!editToken) throw new Error("編集パスコードが必要です");
+  if (editToken) body.set("token", editToken);
+
+  try {
+    const response = await fetch(API_URL, { method: "POST", body });
+    if (!response.ok) throw new Error(`API error ${response.status}`);
+    const text = await response.text();
+    const payload = text ? JSON.parse(text) : {};
+    if (payload?.ok === false) throw new Error(payload.error || "API add error");
     return payload;
   } catch (error) {
     if (!(error instanceof TypeError)) throw error;
@@ -494,6 +609,7 @@ function normalizeTrack(raw, index = 0) {
 function render() {
   renderTags();
   renderDailyPick();
+  renderAddTrackPanel();
   const tracks = filterTracks();
   const pageCount = Math.max(1, Math.ceil(tracks.length / PAGE_SIZE));
   state.page = Math.min(Math.max(1, state.page), pageCount);
@@ -526,6 +642,243 @@ function render() {
 
   for (const track of pageTracks) {
     els.list.append(renderTrack(track));
+  }
+}
+
+function renderAddTrackPanel() {
+  if (!els.addTrackPanel) return;
+  els.addTrack.classList.toggle("active", state.addOpen);
+  els.addTrackPanel.hidden = !state.addOpen;
+  if (!state.addOpen) {
+    els.addTrackPanel.replaceChildren();
+    return;
+  }
+
+  const form = document.createElement("form");
+  form.className = "add-track-form";
+
+  const heading = document.createElement("div");
+  heading.className = "add-track-heading";
+  const title = document.createElement("strong");
+  title.textContent = "新しい曲";
+  const close = document.createElement("button");
+  close.type = "button";
+  close.textContent = "閉じる";
+  close.addEventListener("click", () => {
+    state.addOpen = false;
+    state.addError = "";
+    state.addStatus = null;
+    render();
+  });
+  heading.append(title, close);
+  form.append(heading);
+
+  form.append(makeWavFileInput());
+  form.append(makeEditInput("title", "曲名", "", "曲名"));
+  form.append(makeEditInput("artist", "アーティスト", "", "アーティスト"));
+  const urlField = makeEditInput("url", "WAV URL", "", "https://.../song.wav", "url");
+  urlField.classList.add("edit-field-wide");
+  form.append(urlField);
+  const fileNameField = makeEditInput("fileName", "ファイル名", "", "song.wav");
+  fileNameField.classList.add("edit-field-wide");
+  form.append(fileNameField);
+  form.append(makeEditInput("category", "バージョン", "", "Mastering-2"));
+  form.append(makeEditInput("retake_count", "歌い直し回数", "0", "0", "number"));
+  form.append(makeAddTrackDiagnosis());
+
+  form.append(makeEditHeading("歌う情報"));
+  form.append(makeRatingInput(""));
+  form.append(makeEditCheckbox("karaoke_ready", "🎤 歌える", false));
+  form.append(makeEditInput("highest_note", "最高音", "", "mid2G#"));
+  form.append(makeKeySelect("±0"));
+
+  form.append(makeEditHeading("分類・メモ"));
+  form.append(makeGenreInput([]));
+  const memoLabel = document.createElement("label");
+  memoLabel.className = "edit-field edit-field-wide";
+  memoLabel.textContent = "メモ";
+  const memo = document.createElement("textarea");
+  memo.name = "memo";
+  memo.rows = 3;
+  memoLabel.append(memo);
+  form.append(memoLabel);
+
+  if (state.addStatus?.text) {
+    const status = document.createElement("p");
+    status.className = `edit-sync-status ${state.addStatus.type || "info"}`;
+    status.textContent = state.addStatus.text;
+    form.append(status);
+  }
+  if (state.addError) {
+    const error = document.createElement("p");
+    error.className = "edit-error";
+    error.textContent = state.addError;
+    form.append(error);
+  }
+
+  const actions = document.createElement("div");
+  actions.className = "edit-actions";
+  const save = document.createElement("button");
+  save.type = "submit";
+  save.textContent = state.addingTrack ? "追加中" : "追加";
+  save.disabled = state.addingTrack;
+  actions.append(save);
+  form.append(actions);
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    submitTrackAdd(form);
+  });
+  form.addEventListener("input", () => updateAddTrackDiagnosis(form));
+  updateAddTrackDiagnosis(form);
+
+  els.addTrackPanel.replaceChildren(form);
+}
+
+function makeWavFileInput() {
+  const field = document.createElement("label");
+  field.className = "edit-field edit-field-wide wav-file-field";
+  field.textContent = "WAVを選択";
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".wav,audio/wav,audio/wave,audio/x-wav";
+  input.addEventListener("change", () => {
+    const file = input.files?.[0];
+    if (!file) return;
+    applyParsedFileName(field.closest("form"), file.name);
+  });
+  const hint = document.createElement("small");
+  hint.className = "wav-file-message";
+  hint.textContent = "ファイル名から曲名・Re・バージョンを自動入力します";
+  field.append(input, hint);
+  return field;
+}
+
+function applyParsedFileName(form, fileName) {
+  const parsed = parseSongFileName(fileName);
+  setFormValue(form, "fileName", fileName);
+  if (parsed.artist) setFormValue(form, "artist", parsed.artist);
+  if (parsed.title) setFormValue(form, "title", parsed.title);
+  if (parsed.version) setFormValue(form, "category", parsed.version);
+  setFormValue(form, "retake_count", parsed.retake ? String(parsed.retake) : "0");
+  const message = form.querySelector(".wav-file-message");
+  if (message) {
+    message.textContent = parsed.artist && parsed.title
+      ? `${parsed.artist} / ${parsed.title} を読み取りました`
+      : "ファイル名を読み取りました";
+  }
+  state.addError = "";
+  updateAddTrackDiagnosis(form);
+}
+
+function setFormValue(form, name, value) {
+  const field = form?.elements?.[name];
+  if (field) field.value = value;
+}
+
+function makeAddTrackDiagnosis() {
+  const panel = document.createElement("div");
+  panel.className = "add-track-diagnosis edit-field-wide";
+
+  const retake = document.createElement("span");
+  retake.dataset.addDiagnosis = "retake";
+
+  const mode = document.createElement("strong");
+  mode.dataset.addDiagnosis = "mode";
+
+  const target = document.createElement("small");
+  target.dataset.addDiagnosis = "target";
+
+  panel.append(retake, mode, target);
+  return panel;
+}
+
+function updateAddTrackDiagnosis(form) {
+  const panel = form?.querySelector(".add-track-diagnosis");
+  if (!panel) return;
+
+  const fields = addTrackFieldsFromForm(form);
+  const retake = Number(fields.retake_count) || 0;
+  const existing = findBaseTrackForAdd(fields);
+  const isOverwrite = retake === 0 && Boolean(existing);
+
+  panel.querySelector("[data-add-diagnosis='retake']").textContent = retake > 0
+    ? `歌い直し: Re${retake}`
+    : "歌い直し: なし";
+  panel.querySelector("[data-add-diagnosis='mode']").textContent = isOverwrite
+    ? "保存時: 既存曲を上書き"
+    : "保存時: 新規追加";
+  panel.querySelector("[data-add-diagnosis='mode']").className = isOverwrite ? "overwrite" : "create";
+  panel.querySelector("[data-add-diagnosis='target']").textContent = isOverwrite
+    ? `対象: ${existing.artist || "アーティスト未設定"} / ${existing.title}`
+    : "Re付き、または同じ曲が見つからない場合は新規登録します";
+
+  if (isOverwrite) {
+    applyExistingTrackFields(form, existing);
+  } else if (form.dataset.loadedExistingId) {
+    clearExistingTrackFields(form);
+  }
+}
+
+function findBaseTrackForAdd(fields) {
+  const title = comparableText(fields.title);
+  const artist = comparableText(fields.artist);
+  if (!title) return null;
+  return state.tracks.find((track) => {
+    if (Number(track.retake) > 0) return false;
+    if (comparableText(track.title) !== title) return false;
+    const trackArtist = comparableText(track.artist);
+    return !artist || !trackArtist || trackArtist === artist;
+  }) || null;
+}
+
+function comparableText(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function applyExistingTrackFields(form, track) {
+  if (!track?.id || form.dataset.loadedExistingId === track.id) return;
+  form.dataset.loadedExistingId = track.id;
+  setRatingFormValue(form, track.quality);
+  setCheckboxValue(form, "karaoke_ready", track.karaokeReady);
+  setFormValue(form, "highest_note", track.highestNote || "");
+  setFormValue(form, "key", track.key || "±0");
+  setFormValue(form, "tags", track.genreTags?.join(", ") || "");
+  setFormValue(form, "memo", track.memo || "");
+  syncGenreSuggestionState(form);
+}
+
+function clearExistingTrackFields(form) {
+  delete form.dataset.loadedExistingId;
+  setRatingFormValue(form, "");
+  setCheckboxValue(form, "karaoke_ready", false);
+  setFormValue(form, "highest_note", "");
+  setFormValue(form, "key", "±0");
+  setFormValue(form, "tags", "");
+  setFormValue(form, "memo", "");
+  syncGenreSuggestionState(form);
+}
+
+function setCheckboxValue(form, name, checked) {
+  const field = form?.elements?.[name];
+  if (field) field.checked = Boolean(checked);
+}
+
+function setRatingFormValue(form, value) {
+  const score = Math.max(0, Math.min(5, Number(value) || 0));
+  const input = form?.elements?.quality_score;
+  if (input) input.value = score ? String(score) : "";
+  const buttons = form?.querySelectorAll(".edit-rating button") || [];
+  buttons.forEach((button, index) => {
+    button.textContent = index < score ? "★" : "☆";
+    button.classList.toggle("active", index < score);
+  });
+}
+
+function syncGenreSuggestionState(form) {
+  const tags = normalizeTags(form?.elements?.tags?.value || "");
+  for (const chip of form?.querySelectorAll(".edit-tag-suggestions button") || []) {
+    chip.classList.toggle("active", tags.includes(chip.textContent));
   }
 }
 
@@ -1579,6 +1932,11 @@ function keepTrackInView(id) {
   }
 }
 
+function pageForTrack(id, tracks) {
+  const index = tracks.findIndex((track) => track.id === id);
+  return index === -1 ? state.page : Math.floor(index / PAGE_SIZE) + 1;
+}
+
 function playlistContainsTrack(view, trackId) {
   if (["all", "latest10", "favorites", "recentlyPlayed"].includes(view)) {
     if (view === "favorites") return state.favorites.has(trackId);
@@ -1724,6 +2082,33 @@ function fileNameFromUrl(value) {
   }
 }
 
+function parseSongFileName(fileName) {
+  const base = stripExtension(fileNameFromUrl(fileName) || fileName);
+  const parts = base.split("_").map((part) => part.trim()).filter(Boolean);
+  if (parts.length < 3) return { artist: "", title: stripExtension(fileName), retake: 0, version: "" };
+
+  const artist = parts.shift() || "";
+  const version = normalizeFileVersion(parts.pop() || "");
+  let retake = 0;
+  const retakeMatch = parts.at(-1)?.match(/^Re(\d+)$/i);
+  if (retakeMatch) {
+    retake = Number(retakeMatch[1]) || 0;
+    parts.pop();
+  }
+
+  return {
+    artist,
+    title: parts.join("_"),
+    retake,
+    version,
+  };
+}
+
+function normalizeFileVersion(value) {
+  const version = String(value || "").trim();
+  return version.replace(/^Matering-/i, "Mastering-");
+}
+
 function prepareWaveform(track) {
   state.waveform = makeLightweightWaveform(track);
   drawWaveform(progressRatio());
@@ -1779,10 +2164,7 @@ function progressRatio() {
 }
 
 function versionFromFileName(value) {
-  const name = stripExtension(fileNameFromUrl(value) || value);
-  const match = name.match(/(?:^|_)(Re_)?(Mastering-\d+|Master-\d+|Mix-\d+)$/i);
-  if (!match) return "";
-  return `${match[1] || ""}${match[2]}`;
+  return parseSongFileName(value).version;
 }
 
 function dateValue(value) {
@@ -1839,3 +2221,4 @@ function demoTracks() {
     }),
   ];
 }
+

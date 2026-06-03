@@ -47,7 +47,7 @@ select {
 
 .topbar {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
+  grid-template-columns: 44px minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
   padding: 6px 0 16px;
@@ -108,6 +108,26 @@ h1 {
   box-shadow: 0 10px 22px rgba(239, 23, 68, 0.28);
   color: #fff;
   justify-self: start;
+}
+
+.topbar-action {
+  grid-column: 3;
+  grid-row: 1;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.topbar-action.active {
+  border-color: rgba(255, 205, 91, 0.52);
+  background: rgba(255, 205, 91, 0.14);
+  color: #ffd166;
 }
 
 .search-panel {
@@ -362,6 +382,47 @@ h1 {
   color: #fff;
   background: var(--accent);
   border-color: var(--accent);
+}
+
+.add-track-panel {
+  margin-top: 12px;
+}
+
+.add-track-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid rgba(255, 205, 91, 0.28);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(255, 205, 91, 0.08), rgba(239, 23, 68, 0.08)),
+    rgba(17, 17, 19, 0.9);
+  box-shadow: var(--shadow);
+}
+
+.add-track-heading {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.add-track-heading strong {
+  color: #ffd166;
+  font-size: 0.92rem;
+}
+
+.add-track-heading button {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 800;
 }
 
 .chips {
@@ -1041,6 +1102,60 @@ h1 {
   min-height: 74px;
   padding: 9px;
   resize: vertical;
+}
+
+.wav-file-field input {
+  padding: 8px;
+}
+
+.wav-file-field small {
+  color: rgba(243, 238, 240, 0.52);
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.add-track-diagnosis {
+  display: grid;
+  gap: 6px;
+  padding: 9px;
+  border: 1px solid rgba(255, 205, 91, 0.26);
+  border-radius: 8px;
+  background: rgba(255, 205, 91, 0.08);
+}
+
+.add-track-diagnosis span,
+.add-track-diagnosis strong {
+  display: flex;
+  align-items: center;
+  min-height: 26px;
+  color: var(--ink);
+  font-size: 0.82rem;
+  line-height: 1.2;
+}
+
+.add-track-diagnosis strong {
+  width: fit-content;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-weight: 900;
+}
+
+.add-track-diagnosis strong.create {
+  background: rgba(85, 204, 145, 0.16);
+  color: #8ee0b4;
+}
+
+.add-track-diagnosis strong.overwrite {
+  background: rgba(255, 205, 91, 0.16);
+  color: #ffd166;
+}
+
+.add-track-diagnosis small {
+  color: rgba(243, 238, 240, 0.56);
+  font-size: 0.74rem;
+  font-weight: 800;
+  line-height: 1.35;
 }
 
 .edit-check {

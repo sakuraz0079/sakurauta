@@ -11,12 +11,13 @@
     <link rel="icon" href="./icon-192.png" type="image/png">
     <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
     <link rel="manifest" href="./manifest.webmanifest">
-    <link rel="stylesheet" href="./style.css?v=20260602-42">
+    <link rel="stylesheet" href="./style.css?v=20260603-05">
   </head>
   <body>
     <div class="app-shell player-compact">
       <header class="topbar compact">
         <img class="brand-logo" src="./icon/sak-uta-logo-transparent.png" alt="sak_Uta">
+        <button class="topbar-action" id="addTrackButton" type="button">曲追加</button>
         <button class="icon-button" id="refreshButton" type="button" aria-label="更新" title="更新">↻</button>
       </header>
 
@@ -64,6 +65,8 @@
 
           <div class="chips" id="tagChips" aria-label="タグ"></div>
         </section>
+
+        <section class="add-track-panel" id="addTrackPanel" hidden></section>
 
         <section class="status-row" aria-live="polite">
           <span id="countLabel">読み込み中</span>
@@ -125,6 +128,6 @@
       </article>
     </template>
 
-    <script src="./app.js?v=20260602-42" type="module"></script>
+    <script src="./app.js?v=20260603-05" type="module"></script>
   </body>
 </html>
