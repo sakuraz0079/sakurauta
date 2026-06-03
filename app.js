@@ -6,7 +6,6 @@ const RECENT_KEY = "utawav.recent";
 const LAST_TRACK_KEY = "utawav.lastTrack";
 const DAILY_PICK_HISTORY_KEY = "utawav.dailyPickHistory";
 const SEARCH_HISTORY_KEY = "utawav.searchHistory";
-const SAK_VOICE_KEY = "utawav.sakVoice";
 const EDIT_TOKEN_KEY = "utawav.editToken";
 const UPLOAD_TOKEN_KEY = "utawav.uploadToken";
 const SHUFFLE_KEY = "utawav.shuffle";
@@ -16,8 +15,6 @@ const KARAOKE_FILTER = "__karaoke_ready";
 const PAGE_SIZE = 20;
 const EXCLUDED_GENRE_TAGS = new Set(["mastering"]);
 const PARAMS = new URLSearchParams(location.search);
-let playerSakVoiceTimer = 0;
-let playerSakVoiceHideTimer = 0;
 
 const state = {
   tracks: [],
@@ -29,8 +26,6 @@ const state = {
   detailId: "",
   dailyPickId: "",
   dailyLineNonce: 0,
-  sakVoice: readJson(SAK_VOICE_KEY) || null,
-  playerSakVoice: null,
   editId: "",
   savingEditId: "",
   editError: "",
@@ -66,7 +61,6 @@ const els = {
   tags: document.querySelector("#tagChips"),
   count: document.querySelector("#countLabel"),
   sync: document.querySelector("#syncLabel"),
-  sakVoice: document.querySelector("#sakVoice"),
   dailyPick: document.querySelector("#dailyPick"),
   list: document.querySelector("#trackList"),
   template: document.querySelector("#trackTemplate"),
@@ -74,7 +68,6 @@ const els = {
   nowTitle: document.querySelector("#nowTitle"),
   nowArtist: document.querySelector("#nowArtist"),
   nowMeta: document.querySelector("#nowMeta"),
-  playerSakVoice: document.querySelector("#playerSakVoice"),
   playbackStatus: document.querySelector("#playbackStatus"),
   seek: document.querySelector("#seekRange"),
   waveCanvas: document.querySelector("#waveCanvas"),
@@ -120,7 +113,6 @@ async function init() {
 
 function bindEvents() {
   els.search.addEventListener("input", () => {
-    hidePlayerSakVoice();
     state.query = els.search.value.trim().toLowerCase();
     state.page = 1;
     updateClearSearchButton();
@@ -135,7 +127,6 @@ function bindEvents() {
   });
   els.search.addEventListener("blur", commitSearchQuery);
   els.clearSearch.addEventListener("click", () => {
-    hidePlayerSakVoice();
     els.search.value = "";
     state.query = "";
     state.page = 1;
@@ -145,14 +136,12 @@ function bindEvents() {
   });
 
   els.sort.addEventListener("change", () => {
-    hidePlayerSakVoice();
     state.sort = els.sort.value;
     state.page = 1;
     render();
   });
 
   els.view.addEventListener("change", () => {
-    hidePlayerSakVoice();
     state.view = els.view.value;
     state.page = 1;
     renderPlaylistOptions();
@@ -160,11 +149,9 @@ function bindEvents() {
   });
 
   els.refresh.addEventListener("click", () => {
-    hidePlayerSakVoice();
     loadTracks({ force: true });
   });
   els.addTrack.addEventListener("click", () => {
-    hidePlayerSakVoice();
     state.addOpen = !state.addOpen;
     state.addError = "";
     state.addStatus = null;
@@ -177,13 +164,11 @@ function bindEvents() {
     createPlaylist(els.playlistName.value);
   });
   els.prevPage.addEventListener("click", () => {
-    hidePlayerSakVoice();
     state.page = Math.max(1, state.page - 1);
     render();
     scrollToTop();
   });
   els.nextPage.addEventListener("click", () => {
-    hidePlayerSakVoice();
     state.page += 1;
     render();
     scrollToTop();
@@ -407,7 +392,6 @@ async function submitTrackAdd(form) {
     state.addOpen = false;
     state.addStatus = { type: "success", text: `${doneLabel}完了 ${formatTime(new Date())}` };
     if (added) {
-      setSakVoice("added", added, { mode });
       setEditStatus(added.id, "success", `${doneLabel}完了・内容を確認できます ${formatTime(new Date())}`);
       state.detailId = added.id;
       state.page = pageForTrack(added.id, filterTracks());
@@ -562,7 +546,6 @@ async function archiveTrack(track) {
     state.detailId = "";
     state.editId = "";
     state.savingEditId = "";
-    setSakVoice("archive", track);
     setEditStatus(track.id, "success", `アーカイブ完了 ${formatTime(new Date())}`);
     await reloadTracksFromApi({ status: "アーカイブの同期確認中", successPrefix: "アーカイブ・同期" });
   } catch (error) {
@@ -755,8 +738,6 @@ function normalizeTrack(raw, index = 0) {
 
 function render() {
   renderTags();
-  renderSakVoice();
-  renderPlayerSakVoice();
   renderDailyPick();
   renderAddTrackPanel();
   const tracks = filterTracks();
@@ -791,44 +772,6 @@ function render() {
 
   for (const track of pageTracks) {
     els.list.append(renderTrack(track));
-  }
-}
-
-function renderSakVoice() {
-  if (!els.sakVoice) return;
-  const voice = state.sakVoice;
-  if (!voice?.text) {
-    els.sakVoice.hidden = true;
-    els.sakVoice.replaceChildren();
-    return;
-  }
-
-  els.sakVoice.hidden = false;
-  const avatar = document.createElement("img");
-  avatar.src = "./icon/sak-chan-face.png";
-  avatar.alt = "sakちゃん";
-
-  const body = document.createElement("div");
-  const label = document.createElement("span");
-  label.textContent = voice.label || "sakちゃん";
-  const text = document.createElement("p");
-  text.textContent = voice.text;
-  body.append(label, text);
-
-  els.sakVoice.replaceChildren(avatar, body);
-}
-
-function renderPlayerSakVoice() {
-  if (!els.playerSakVoice) return;
-  const voice = state.playerSakVoice;
-  const text = voice?.text || "";
-  els.playerSakVoice.hidden = !text;
-  const textNode = els.playerSakVoice.querySelector("p");
-  if (textNode) textNode.textContent = text;
-  if (text) {
-    window.requestAnimationFrame(() => els.playerSakVoice?.classList.add("show"));
-  } else {
-    els.playerSakVoice.classList.remove("show");
   }
 }
 
@@ -1229,7 +1172,6 @@ function commitSearchQuery() {
   if (!query) return;
   state.searchHistory = [query, ...state.searchHistory.filter((item) => item.toLowerCase() !== query.toLowerCase())].slice(0, 8);
   localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(state.searchHistory));
-  setSakVoice("search", null, { query });
   renderSearchHistory();
 }
 
@@ -1282,75 +1224,6 @@ function rememberDailyPick(id) {
   if (!id) return;
   const history = [id, ...readArray(DAILY_PICK_HISTORY_KEY).filter((item) => item !== id)].slice(0, 12);
   localStorage.setItem(DAILY_PICK_HISTORY_KEY, JSON.stringify(history));
-}
-
-function setSakVoice(event, track = null, detail = {}) {
-  const text = sakVoiceLine(event, track, detail);
-  if (!text) return;
-  if (event === "play") {
-    showPlayerSakVoice(text, detail);
-    return;
-  }
-  state.sakVoice = {
-    label: detail.label || "sakちゃん",
-    text,
-    at: Date.now(),
-  };
-  localStorage.setItem(SAK_VOICE_KEY, JSON.stringify(state.sakVoice));
-  renderSakVoice();
-}
-
-function showPlayerSakVoice(text, detail = {}) {
-  window.clearTimeout(playerSakVoiceHideTimer);
-  state.playerSakVoice = {
-    label: detail.label || "sakちゃん",
-    text,
-    at: Date.now(),
-  };
-  renderPlayerSakVoice();
-  window.clearTimeout(playerSakVoiceTimer);
-  playerSakVoiceTimer = window.setTimeout(hidePlayerSakVoice, 6200);
-}
-
-function hidePlayerSakVoice() {
-  if (!state.playerSakVoice) return;
-  state.playerSakVoice = null;
-  window.clearTimeout(playerSakVoiceTimer);
-  window.clearTimeout(playerSakVoiceHideTimer);
-  if (!els.playerSakVoice) return;
-  els.playerSakVoice.classList.remove("show");
-  playerSakVoiceHideTimer = window.setTimeout(renderPlayerSakVoice, 240);
-}
-
-function sakVoiceLine(event, track, detail = {}) {
-  const lines = [];
-  if (event === "play" && track) {
-    if (track.karaokeReady && track.highestNote) lines.push(`今日は${track.highestNote}まで、ゆっくり声を乗せてこ。`);
-    if (track.karaokeReady) lines.push("マイク印の曲だね。いける日かも。");
-    if (Number(track.quality) >= 4) lines.push("仕上がりいい曲。気持ちよく入れるやつ。");
-    if (Number(track.retake) > 0) lines.push(`Re${track.retake}、前よりよくなる余地がある曲。`);
-    if (track.genreTags.includes("ロック") || track.genreTags.includes("V系")) lines.push("この空気、少し暗めに光ってていいね。");
-    lines.push(`${track.title}、今の気分に置いてみよ。`);
-  }
-  if (event === "added") {
-    lines.push(`${detail.mode === "updated" ? "更新" : "追加"}できたよ。今のカードで音と情報を確認しよ。`);
-    lines.push("棚が整ってきたね。次は再生チェックまでいこ。");
-  }
-  if (event === "archive" && track) {
-    lines.push(`${track.title}はいったん棚の奥へ。必要ならシートから戻せるよ。`);
-    lines.push("整理できた。残した曲が少し見やすくなったね。");
-  }
-  if (event === "search") {
-    lines.push(`「${detail.query}」で探してる。今日はどの曲に寄っていく？`);
-    lines.push("探すところから、もう選曲は始まってるね。");
-  }
-  return pickSakLine(lines, `${event}:${track?.id || detail.query || ""}:${Date.now()}`);
-}
-
-function pickSakLine(lines, seedText) {
-  const unique = lines.filter(Boolean);
-  if (!unique.length) return "";
-  return unique[Math.abs(hashString(seedText)) % unique.length];
 }
 
 function randomSeed(salt = "") {
@@ -1564,7 +1437,6 @@ function makePlaylistChip(value, label) {
   button.className = `playlist-chip${state.view === value ? " active" : ""}`;
   button.textContent = label;
   button.addEventListener("click", () => {
-    hidePlayerSakVoice();
     state.view = value;
     els.view.value = value;
     state.page = 1;
@@ -1581,7 +1453,6 @@ function makeChip(label, value) {
   if (value === KARAOKE_FILTER) button.classList.add("karaoke-filter");
   button.textContent = label;
   button.addEventListener("click", () => {
-    hidePlayerSakVoice();
     state.tag = state.tag === value ? "" : value;
     state.page = 1;
     render();
@@ -1651,13 +1522,9 @@ function renderTrack(track) {
   favorite.textContent = state.favorites.has(track.id) ? "★" : "☆";
   favorite.addEventListener("click", (event) => {
     event.stopPropagation();
-    hidePlayerSakVoice();
     toggleFavorite(track.id);
   });
-  node.addEventListener("click", () => {
-    hidePlayerSakVoice();
-    toggleDetail(track.id);
-  });
+  node.addEventListener("click", () => toggleDetail(track.id));
   if (expanded) node.append(renderInlineDetail(track));
   return node;
 }
@@ -2043,7 +1910,6 @@ function playTrack(track, { autoplay = true } = {}) {
   localStorage.setItem(LAST_TRACK_KEY, track.id);
   state.recent = [track.id, ...state.recent.filter((id) => id !== track.id)].slice(0, 50);
   localStorage.setItem(RECENT_KEY, JSON.stringify(state.recent));
-  if (autoplay) setSakVoice("play", track);
   if (autoplay) {
     els.audio.play().catch(() => {
       setPlaybackStatus("error", "\u518d\u751f\u3092\u958b\u59cb\u3067\u304d\u307e\u305b\u3093\u3067\u3057\u305f");

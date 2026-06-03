@@ -1,12 +1,10 @@
-const CACHE_NAME = "sak-uta-app-v83";
+const CACHE_NAME = "sak-uta-app-v86";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./style.css?v=20260603-22",
-  "./app.js?v=20260603-22",
+  "./style.css?v=20260603-25",
+  "./app.js?v=20260603-25",
   "./icon/sak-chan-face.png",
-  "./icon/sak-chan-peek.png",
-  "./icon/sak-chan-player-peek.png",
   "./manifest.webmanifest",
   "./icon/IMG_2956.png",
   "./icon/IMG_2957.png",
