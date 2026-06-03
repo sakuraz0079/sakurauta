@@ -1328,6 +1328,7 @@ function latestTracks(tracks, limit) {
 
 function playTrack(track, { autoplay = true } = {}) {
   if (!track.url) return;
+  if (autoplay) triggerStageTransfer(track.id);
   state.currentId = track.id;
   if (autoplay) expandPlayerForPlayback();
   setPlaybackStatus(autoplay ? "loading" : "ready", autoplay ? "\u8aad\u307f\u8fbc\u307f\u4e2d" : "");
@@ -1595,6 +1596,29 @@ function scrollTrackIntoView(id) {
       block: "center",
     });
   }, 50);
+}
+
+function triggerStageTransfer(id) {
+  const card = document.querySelector(`[data-track-id="${CSS.escape(id)}"]`);
+  if (!card || !els.player || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  const cardRect = card.getBoundingClientRect();
+  const playerRect = els.player.getBoundingClientRect();
+  if (cardRect.bottom < 0 || cardRect.top > window.innerHeight) return;
+
+  card.classList.add("stage-launch");
+  window.setTimeout(() => card.classList.remove("stage-launch"), 900);
+  els.player.classList.add("stage-receive");
+  window.setTimeout(() => els.player.classList.remove("stage-receive"), 900);
+
+  const light = document.createElement("span");
+  light.className = "stage-transfer-light";
+  light.style.setProperty("--from-x", `${cardRect.left + cardRect.width * 0.5}px`);
+  light.style.setProperty("--from-y", `${cardRect.top + cardRect.height * 0.5}px`);
+  light.style.setProperty("--to-x", `${playerRect.left + playerRect.width * 0.5}px`);
+  light.style.setProperty("--to-y", `${playerRect.top + 18}px`);
+  document.body.append(light);
+  light.addEventListener("animationend", () => light.remove(), { once: true });
 }
 
 function moveDetail(direction) {
