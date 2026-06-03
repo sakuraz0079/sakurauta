@@ -1,4 +1,4 @@
-﻿const API_URL = "https://script.google.com/macros/s/AKfycbyh4854enNZlGObSJu3qc3_t3MqD6lO9afRWbWLkjNcQpfCu1P8GXrQPCyPjbdZFzy3RQ/exec";
+﻿const API_URL = "https://script.google.com/macros/s/AKfycbxNHOf1ueQvlaOSZSgxSt8_Nq5CDwQVxUWLlT64dpSy3ha8NBFZH4JX_2pEEdB1wefQdw/exec";
 const WAV_UPLOAD_URL = "https://sakurauta-wav-upload.sakuraz0079.workers.dev";
 const CACHE_KEY = "utawav.tracks";
 const FAVORITES_KEY = "utawav.favorites";
@@ -2313,4 +2313,5 @@ function demoTracks() {
     }),
   ];
 }
+
 
