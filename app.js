@@ -798,6 +798,10 @@ async function uploadSelectedWav(form, input, button) {
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok || payload?.ok === false) {
+      if (response.status === 401 || payload?.error === "Invalid upload token") {
+        localStorage.removeItem(UPLOAD_TOKEN_KEY);
+        throw new Error("アップロード用トークンが違います。次回もう一度入力してください");
+      }
       throw new Error(payload?.error || `Upload error ${response.status}`);
     }
     setFormValue(form, "url", payload.url || "");
