@@ -1420,12 +1420,14 @@ h1 {
 .player.is-playing {
   border-top-color: rgba(255, 205, 91, 0.32);
   background:
-    radial-gradient(ellipse at 50% -18%, rgba(255, 205, 91, 0.24), transparent 230px),
+    radial-gradient(ellipse at 28% -18%, rgba(255, 205, 91, 0.28), transparent 230px),
+    radial-gradient(ellipse at 74% 8%, rgba(239, 23, 68, 0.2), transparent 210px),
     linear-gradient(135deg, rgba(239, 23, 68, 0.24), rgba(18, 107, 90, 0.16)),
     rgba(8, 8, 9, 0.98);
   box-shadow:
     0 -18px 44px rgba(0, 0, 0, 0.62),
     0 -10px 34px rgba(239, 23, 68, 0.14);
+  animation: playerLiveGlow 5200ms ease-in-out infinite;
 }
 
 .player.stage-receive {
@@ -1457,6 +1459,26 @@ h1 {
   background: linear-gradient(90deg, transparent, rgba(255, 205, 91, 0.7), rgba(239, 23, 68, 0.68), transparent);
   opacity: 0.45;
   transform: translateX(-50%);
+}
+
+.player-inner::after {
+  content: "";
+  position: absolute;
+  inset: 34px 12px auto;
+  height: 88px;
+  border-radius: 999px;
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(255, 205, 91, 0.15), transparent 62%),
+    radial-gradient(ellipse at 24% 50%, rgba(18, 107, 90, 0.16), transparent 48%);
+  opacity: 0;
+  pointer-events: none;
+  filter: blur(14px);
+  transform: translateY(8px);
+}
+
+.player.is-playing .player-inner::after {
+  opacity: 1;
+  animation: playerAura 4200ms ease-in-out infinite;
 }
 
 .player.is-playing .player-inner::before {
@@ -1715,6 +1737,37 @@ audio {
   }
 }
 
+@keyframes playerLiveGlow {
+  0%,
+  100% {
+    border-top-color: rgba(255, 205, 91, 0.32);
+    box-shadow:
+      0 -18px 44px rgba(0, 0, 0, 0.62),
+      0 -10px 34px rgba(239, 23, 68, 0.14);
+  }
+
+  50% {
+    border-top-color: rgba(255, 205, 91, 0.56);
+    box-shadow:
+      0 -18px 44px rgba(0, 0, 0, 0.62),
+      0 -14px 42px rgba(255, 205, 91, 0.16),
+      0 -8px 38px rgba(239, 23, 68, 0.2);
+  }
+}
+
+@keyframes playerAura {
+  0%,
+  100% {
+    transform: translateY(8px) scaleX(0.96);
+    opacity: 0.76;
+  }
+
+  50% {
+    transform: translateY(2px) scaleX(1.04);
+    opacity: 1;
+  }
+}
+
 @keyframes playerStageReceive {
   0%,
   48% {
@@ -1965,8 +2018,10 @@ audio {
 @media (prefers-reduced-motion: reduce) {
   .track-card.stage-launch,
   .stage-transfer-light,
+  .player.is-playing,
   .player.stage-receive,
   .player.is-playing .player-inner::before,
+  .player.is-playing .player-inner::after,
   .track-card.is-playing .now-indicator i {
     animation: none;
   }

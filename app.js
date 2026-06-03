@@ -2354,7 +2354,8 @@ function drawWaveform(progress = progressRatio()) {
   const width = canvas.width;
   const height = canvas.height;
   ctx.clearRect(0, 0, width, height);
-  ctx.fillStyle = "#f1eee7";
+  const playing = state.isPlaying && state.playbackStatus !== "error";
+  ctx.fillStyle = playing ? "#fff7df" : "#f1eee7";
   ctx.fillRect(0, 0, width, height);
 
   const bars = state.waveform.length ? state.waveform : Array.from({ length: 72 }, (_, index) => 0.18 + 0.22 * Math.sin(index * 0.65) ** 2);
@@ -2366,9 +2367,22 @@ function drawWaveform(progress = progressRatio()) {
     const x = index * (barWidth + gap);
     const barHeight = Math.max(4, value * (height - 10));
     const y = (height - barHeight) / 2;
-    ctx.fillStyle = x <= activeX ? "#126b5a" : "#c9c2b6";
+    const isActive = x <= activeX;
+    if (playing && isActive) {
+      const warm = ctx.createLinearGradient(0, y, 0, y + barHeight);
+      warm.addColorStop(0, "#ffd166");
+      warm.addColorStop(0.48, "#ef1744");
+      warm.addColorStop(1, "#126b5a");
+      ctx.fillStyle = warm;
+      ctx.shadowColor = "rgba(239, 23, 68, 0.24)";
+      ctx.shadowBlur = 5;
+    } else {
+      ctx.fillStyle = isActive ? "#126b5a" : "#c9c2b6";
+      ctx.shadowBlur = 0;
+    }
     ctx.fillRect(x, y, barWidth, barHeight);
   });
+  ctx.shadowBlur = 0;
 }
 
 function progressRatio() {
