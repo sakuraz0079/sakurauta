@@ -390,9 +390,12 @@ async function submitTrackAdd(form) {
     state.addOpen = false;
     state.addStatus = { type: "success", text: `${doneLabel}完了 ${formatTime(new Date())}` };
     if (added) {
+      setEditStatus(added.id, "success", `${doneLabel}完了・内容を確認できます ${formatTime(new Date())}`);
       state.detailId = added.id;
       state.page = pageForTrack(added.id, filterTracks());
       keepTrackInView(added.id);
+    } else {
+      els.sync.textContent = state.addStatus.text;
     }
     render();
     if (added) scrollTrackIntoView(added.id);
