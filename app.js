@@ -1586,13 +1586,6 @@ function renderInlineDetail(track) {
   }
   detail.append(actions);
 
-  const dangerActions = document.createElement("div");
-  dangerActions.className = "inline-danger-actions";
-  const archive = makeAction("アーカイブ", () => archiveTrack(track));
-  archive.classList.add("danger-action");
-  dangerActions.append(archive);
-  detail.append(dangerActions);
-
   return detail;
 }
 
@@ -1660,7 +1653,12 @@ function renderMetadataEditor(track) {
     state.editError = "";
     render();
   });
-  actions.append(save, cancel);
+  const archive = document.createElement("button");
+  archive.type = "button";
+  archive.className = "danger-action";
+  archive.textContent = "アーカイブ";
+  archive.addEventListener("click", () => archiveTrack(track));
+  actions.append(archive, cancel, save);
   form.append(actions);
 
   form.addEventListener("submit", (event) => {

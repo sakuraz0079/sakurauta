@@ -976,15 +976,8 @@ h1 {
   gap: 7px;
 }
 
-.inline-danger-actions {
-  display: flex;
-  justify-content: flex-start;
-  margin-top: 2px;
-}
-
 .inline-actions button,
-.inline-actions select,
-.inline-danger-actions button {
+.inline-actions select {
   display: grid;
   place-items: center;
   min-height: 32px;
@@ -1006,15 +999,6 @@ h1 {
   border-color: var(--accent);
   background: var(--accent);
   color: #fff;
-}
-
-.inline-danger-actions .danger-action {
-  min-height: 28px;
-  padding: 0 8px;
-  border-color: rgba(255, 96, 120, 0.42);
-  background: rgba(255, 96, 120, 0.1);
-  color: #ffb7c5;
-  font-size: 0.76rem;
 }
 
 .edit-sync-status {
@@ -1342,6 +1326,14 @@ h1 {
   border-color: var(--accent);
   background: var(--accent);
   color: #fff;
+}
+
+.edit-actions .danger-action {
+  margin-right: auto;
+  border-color: rgba(255, 96, 120, 0.42);
+  background: rgba(255, 96, 120, 0.1);
+  color: #ffb7c5;
+  font-size: 0.78rem;
 }
 
 .edit-actions button:disabled {
