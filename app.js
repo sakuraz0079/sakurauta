@@ -472,7 +472,7 @@ async function saveTrackMetadata(id, fields) {
     id: String(id),
     payload: JSON.stringify(fields),
   });
-  const editToken = getEditToken();
+  const editToken = await getEditToken();
   if (!editToken) throw new Error("編集パスコードが必要です");
   if (editToken) body.set("token", editToken);
 
@@ -499,7 +499,7 @@ async function saveNewTrack(fields) {
     action: "addTrack",
     payload: JSON.stringify(fields),
   });
-  const editToken = getEditToken();
+  const editToken = await getEditToken();
   if (!editToken) throw new Error("編集パスコードが必要です");
   if (editToken) body.set("token", editToken);
 
@@ -517,22 +517,135 @@ async function saveNewTrack(fields) {
   }
 }
 
-function getEditToken() {
+async function archiveTrack(track) {
+  if (!track?.id) return;
+  const confirmed = window.confirm(`${track.title} を一覧から非表示にしますか？\nスプレッドシート上では archived として残ります。`);
+  if (!confirmed) return;
+
+  state.savingEditId = track.id;
+  state.editError = "";
+  setEditStatus(track.id, "saving", "アーカイブ中");
+  render();
+
+  try {
+    await requestArchiveTrack(track.id);
+    state.tracks = state.tracks.filter((item) => item.id !== track.id);
+    localStorage.setItem(CACHE_KEY, JSON.stringify(state.tracks));
+    if (state.currentId === track.id) {
+      els.audio.pause();
+      els.audio.removeAttribute("src");
+      state.currentId = "";
+      state.isPlaying = false;
+      updatePlayerInfo({ title: "曲を選択", artist: "一覧から再生できます", version: "", quality: "", retake: "", karaokeReady: false });
+    }
+    state.detailId = "";
+    state.editId = "";
+    state.savingEditId = "";
+    setEditStatus(track.id, "success", `アーカイブ完了 ${formatTime(new Date())}`);
+    await reloadTracksFromApi({ status: "アーカイブの同期確認中", successPrefix: "アーカイブ・同期" });
+  } catch (error) {
+    state.savingEditId = "";
+    state.editError = error?.message ? `アーカイブできませんでした: ${error.message}` : "アーカイブできませんでした";
+    setEditStatus(track.id, "error", state.editError);
+    state.detailId = track.id;
+    render();
+    scrollTrackIntoView(track.id);
+  }
+}
+
+async function requestArchiveTrack(id) {
+  if (PARAMS.has("demo")) {
+    return { ok: true, demo: true };
+  }
+
+  const body = new URLSearchParams({
+    action: "archiveTrack",
+    id: String(id),
+    payload: "{}",
+  });
+  const editToken = await getEditToken();
+  if (!editToken) throw new Error("編集パスコードが必要です");
+  if (editToken) body.set("token", editToken);
+
+  try {
+    const response = await fetch(API_URL, { method: "POST", body });
+    if (!response.ok) throw new Error(`API error ${response.status}`);
+    const text = await response.text();
+    const payload = text ? JSON.parse(text) : {};
+    if (payload?.ok === false) throw new Error(payload.error || "API archive error");
+    return payload;
+  } catch (error) {
+    if (!(error instanceof TypeError)) throw error;
+    await fetch(API_URL, { method: "POST", mode: "no-cors", body });
+    return { ok: true, opaque: true };
+  }
+}
+
+async function getEditToken() {
   let token = localStorage.getItem(EDIT_TOKEN_KEY) || "";
   if (!token) {
-    token = window.prompt("編集パスコードを入力してください")?.trim() || "";
+    token = await requestSecretInput("編集パスコード", "スプレッドシートを更新するためのパスコードを入力してください");
     if (token) localStorage.setItem(EDIT_TOKEN_KEY, token);
   }
   return token;
 }
 
-function getUploadToken() {
+async function getUploadToken() {
   let token = localStorage.getItem(UPLOAD_TOKEN_KEY) || "";
   if (!token) {
-    token = window.prompt("R2アップロード用トークンを入力してください")?.trim() || "";
+    token = await requestSecretInput("R2アップロード用トークン", "Cloudflare Workerに設定したUPLOAD_TOKENを入力してください");
     if (token) localStorage.setItem(UPLOAD_TOKEN_KEY, token);
   }
   return token;
+}
+
+function requestSecretInput(title, message) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "secret-dialog-backdrop";
+
+    const dialog = document.createElement("form");
+    dialog.className = "secret-dialog";
+
+    const heading = document.createElement("strong");
+    heading.textContent = title;
+
+    const text = document.createElement("p");
+    text.textContent = message;
+
+    const input = document.createElement("input");
+    input.type = "password";
+    input.autocomplete = "off";
+    input.inputMode = "text";
+
+    const actions = document.createElement("div");
+    actions.className = "secret-dialog-actions";
+
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.textContent = "キャンセル";
+
+    const ok = document.createElement("button");
+    ok.type = "submit";
+    ok.textContent = "OK";
+
+    const close = (value) => {
+      overlay.remove();
+      resolve(value);
+    };
+
+    cancel.addEventListener("click", () => close(""));
+    dialog.addEventListener("submit", (event) => {
+      event.preventDefault();
+      close(input.value.trim());
+    });
+
+    actions.append(cancel, ok);
+    dialog.append(heading, text, input, actions);
+    overlay.append(dialog);
+    document.body.append(overlay);
+    input.focus();
+  });
 }
 
 function applyMetadataUpdate(id, fields) {
@@ -575,6 +688,7 @@ function rowsFromValues(values) {
 
 function normalizeTrack(raw, index = 0) {
   if (!raw || typeof raw !== "object") return null;
+  if (parseBoolean(raw.archived ?? raw.deleted ?? raw.hidden)) return null;
   const title = pick(raw, ["title", "song", "name"]);
   const artist = pick(raw, ["artist", "original_artist"]);
   const category = normalizeCategory(pick(raw, ["category", "version", "mix", "master", "mastering"]));
@@ -777,7 +891,7 @@ async function uploadSelectedWav(form, input, button) {
     return;
   }
 
-  const token = getUploadToken();
+  const token = await getUploadToken();
   if (!token) {
     setAddFormFeedback(form, "error", "アップロード用トークンが必要です");
     return;
@@ -1471,6 +1585,13 @@ function renderInlineDetail(track) {
     actions.append(makeAction("\u30ea\u30b9\u30c8\u3092\u4f5c\u308b", showPlaylistForm));
   }
   detail.append(actions);
+
+  const dangerActions = document.createElement("div");
+  dangerActions.className = "inline-danger-actions";
+  const archive = makeAction("アーカイブ", () => archiveTrack(track));
+  archive.classList.add("danger-action");
+  dangerActions.append(archive);
+  detail.append(dangerActions);
 
   return detail;
 }

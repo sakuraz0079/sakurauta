@@ -32,6 +32,9 @@ function doPost(e) {
       result = updateTrack_(id, payload);
     } else if (action === "addTrack") {
       result = addTrack_(payload);
+    } else if (action === "archiveTrack") {
+      const id = String(e.parameter.id || "").trim();
+      result = archiveTrack_(id);
     } else {
       throw new Error(`Unknown action: ${action}`);
     }
@@ -87,6 +90,33 @@ function updateTrack_(id, payload) {
   });
 
   return { id };
+}
+
+function archiveTrack_(id) {
+  if (!id) throw new Error("Missing id");
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  if (!sheet) throw new Error(`Sheet not found: ${SHEET_NAME}`);
+
+  const values = sheet.getDataRange().getValues();
+  if (values.length < 2) throw new Error("No rows");
+
+  const headers = values[0].map((header) => String(header).trim());
+  const idColumn = headers.indexOf("id");
+  if (idColumn === -1) throw new Error("id column not found");
+
+  const rowIndex = values.findIndex((row, index) => {
+    return index > 0 && String(row[idColumn]).trim() === id;
+  });
+  if (rowIndex === -1) throw new Error(`Track not found: ${id}`);
+
+  const archivedColumn = ensureColumn_(sheet, headers, "archived");
+  sheet.getRange(rowIndex + 1, archivedColumn + 1).setValue(true);
+
+  const archivedAtColumn = ensureColumn_(sheet, headers, "archived_at");
+  sheet.getRange(rowIndex + 1, archivedAtColumn + 1).setValue(new Date());
+
+  return { id, archived: true };
 }
 
 function addTrack_(payload) {
@@ -168,6 +198,8 @@ function findBaseTrackRow_(values, headers, rowData) {
 
   for (let index = 1; index < values.length; index += 1) {
     const row = values[index];
+    const archived = getRowValue_(row, headers, ["archived", "deleted", "hidden"]);
+    if (archived === true || String(archived).toLowerCase() === "true") continue;
     const title = normalizeText_(getRowValue_(row, headers, ["title", "song", "name"]));
     const artist = normalizeText_(getRowValue_(row, headers, ["artist", "original_artist"]));
     const retake = Number(getRowValue_(row, headers, ["retake_count", "retake"]) || 0);
@@ -185,6 +217,15 @@ function updateExistingTrackRow_(sheet, rowNumber, headers, rowData) {
     if (!Object.prototype.hasOwnProperty.call(rowData, header)) return;
     sheet.getRange(rowNumber, index + 1).setValue(rowData[header]);
   });
+}
+
+function ensureColumn_(sheet, headers, name) {
+  let index = headers.indexOf(name);
+  if (index !== -1) return index;
+  index = headers.length;
+  sheet.getRange(1, index + 1).setValue(name);
+  headers.push(name);
+  return index;
 }
 
 function getRowValue_(row, headers, names) {
