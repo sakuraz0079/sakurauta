@@ -38,7 +38,7 @@ select {
   width: auto;
   max-width: none;
   margin: 0 16px;
-  padding: max(14px, env(safe-area-inset-top)) 0 316px;
+  padding: max(14px, env(safe-area-inset-top)) 0 292px;
 }
 
 .app-shell.player-compact {
@@ -1573,19 +1573,69 @@ h1 {
   transform: translateY(3px) rotate(18deg);
 }
 
+.player-sak-peek {
+  position: absolute;
+  right: 46px;
+  top: -76px;
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  align-items: end;
+  gap: 8px;
+  width: min(78vw, 330px);
+  pointer-events: none;
+  filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.38));
+  opacity: 0;
+  transform: translateY(12px) scale(0.96);
+  transition: opacity 220ms ease, transform 220ms ease;
+  z-index: 4;
+}
+
+.player-sak-peek.show {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.player-sak-peek[hidden] {
+  display: none;
+}
+
+.player-sak-peek img {
+  width: 76px;
+  height: 92px;
+  object-fit: contain;
+  object-position: bottom center;
+  align-self: end;
+  transform: translateY(18px);
+}
+
+.player-sak-peek p {
+  min-width: 0;
+  margin: 0 0 18px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 209, 102, 0.28);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(255, 209, 102, 0.14), rgba(239, 23, 68, 0.12)),
+    rgba(18, 18, 20, 0.94);
+  color: #ffd166;
+  font-size: 0.78rem;
+  font-weight: 900;
+  line-height: 1.28;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.32);
+}
+
 .now-playing {
   display: grid;
   gap: 3px;
   margin: 0 0 10px;
-  min-height: 108px;
+  min-height: 82px;
   justify-items: center;
   text-align: center;
 }
 
 .now-playing p,
 .now-playing span,
-.now-playing small,
-.now-playing em {
+.now-playing small {
   display: block;
   margin: 0;
   overflow: hidden;
@@ -1613,27 +1663,6 @@ h1 {
   color: var(--accent);
   font-size: 0.76rem;
   font-weight: 800;
-}
-
-.player-sak-voice {
-  display: inline-grid;
-  align-items: center;
-  width: min(100%, 520px);
-  min-height: 28px;
-  margin-top: 4px;
-  padding: 0 12px;
-  border: 1px solid rgba(255, 209, 102, 0.24);
-  border-radius: 999px;
-  background: rgba(255, 209, 102, 0.08);
-  color: #ffd166;
-  font-size: 0.78rem;
-  font-style: normal;
-  font-weight: 900;
-  line-height: 1;
-}
-
-.player-sak-voice.is-empty {
-  visibility: hidden;
 }
 
 .playback-status {
@@ -1872,7 +1901,6 @@ audio {
 
 .player.compact .now-playing span,
 .player.compact .now-playing small,
-.player.compact .player-sak-voice,
 .player.compact .playback-status,
 .player.compact .wave-wrap,
 .player.compact .time-row {

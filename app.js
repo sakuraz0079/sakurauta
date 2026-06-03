@@ -7,7 +7,6 @@ const LAST_TRACK_KEY = "utawav.lastTrack";
 const DAILY_PICK_HISTORY_KEY = "utawav.dailyPickHistory";
 const SEARCH_HISTORY_KEY = "utawav.searchHistory";
 const SAK_VOICE_KEY = "utawav.sakVoice";
-const PLAYER_SAK_VOICE_KEY = "utawav.playerSakVoice";
 const EDIT_TOKEN_KEY = "utawav.editToken";
 const UPLOAD_TOKEN_KEY = "utawav.uploadToken";
 const SHUFFLE_KEY = "utawav.shuffle";
@@ -17,6 +16,8 @@ const KARAOKE_FILTER = "__karaoke_ready";
 const PAGE_SIZE = 20;
 const EXCLUDED_GENRE_TAGS = new Set(["mastering"]);
 const PARAMS = new URLSearchParams(location.search);
+let playerSakVoiceTimer = 0;
+let playerSakVoiceHideTimer = 0;
 
 const state = {
   tracks: [],
@@ -29,7 +30,7 @@ const state = {
   dailyPickId: "",
   dailyLineNonce: 0,
   sakVoice: readJson(SAK_VOICE_KEY) || null,
-  playerSakVoice: readJson(PLAYER_SAK_VOICE_KEY) || null,
+  playerSakVoice: null,
   editId: "",
   savingEditId: "",
   editError: "",
@@ -119,6 +120,7 @@ async function init() {
 
 function bindEvents() {
   els.search.addEventListener("input", () => {
+    hidePlayerSakVoice();
     state.query = els.search.value.trim().toLowerCase();
     state.page = 1;
     updateClearSearchButton();
@@ -133,6 +135,7 @@ function bindEvents() {
   });
   els.search.addEventListener("blur", commitSearchQuery);
   els.clearSearch.addEventListener("click", () => {
+    hidePlayerSakVoice();
     els.search.value = "";
     state.query = "";
     state.page = 1;
@@ -142,20 +145,26 @@ function bindEvents() {
   });
 
   els.sort.addEventListener("change", () => {
+    hidePlayerSakVoice();
     state.sort = els.sort.value;
     state.page = 1;
     render();
   });
 
   els.view.addEventListener("change", () => {
+    hidePlayerSakVoice();
     state.view = els.view.value;
     state.page = 1;
     renderPlaylistOptions();
     render();
   });
 
-  els.refresh.addEventListener("click", () => loadTracks({ force: true }));
+  els.refresh.addEventListener("click", () => {
+    hidePlayerSakVoice();
+    loadTracks({ force: true });
+  });
   els.addTrack.addEventListener("click", () => {
+    hidePlayerSakVoice();
     state.addOpen = !state.addOpen;
     state.addError = "";
     state.addStatus = null;
@@ -168,11 +177,13 @@ function bindEvents() {
     createPlaylist(els.playlistName.value);
   });
   els.prevPage.addEventListener("click", () => {
+    hidePlayerSakVoice();
     state.page = Math.max(1, state.page - 1);
     render();
     scrollToTop();
   });
   els.nextPage.addEventListener("click", () => {
+    hidePlayerSakVoice();
     state.page += 1;
     render();
     scrollToTop();
@@ -811,8 +822,14 @@ function renderPlayerSakVoice() {
   if (!els.playerSakVoice) return;
   const voice = state.playerSakVoice;
   const text = voice?.text || "";
-  els.playerSakVoice.textContent = text || "\u00a0";
-  els.playerSakVoice.classList.toggle("is-empty", !text);
+  els.playerSakVoice.hidden = !text;
+  const textNode = els.playerSakVoice.querySelector("p");
+  if (textNode) textNode.textContent = text;
+  if (text) {
+    window.requestAnimationFrame(() => els.playerSakVoice?.classList.add("show"));
+  } else {
+    els.playerSakVoice.classList.remove("show");
+  }
 }
 
 function renderAddTrackPanel() {
@@ -1271,13 +1288,7 @@ function setSakVoice(event, track = null, detail = {}) {
   const text = sakVoiceLine(event, track, detail);
   if (!text) return;
   if (event === "play") {
-    state.playerSakVoice = {
-      label: detail.label || "sakちゃん",
-      text,
-      at: Date.now(),
-    };
-    localStorage.setItem(PLAYER_SAK_VOICE_KEY, JSON.stringify(state.playerSakVoice));
-    renderPlayerSakVoice();
+    showPlayerSakVoice(text, detail);
     return;
   }
   state.sakVoice = {
@@ -1287,6 +1298,28 @@ function setSakVoice(event, track = null, detail = {}) {
   };
   localStorage.setItem(SAK_VOICE_KEY, JSON.stringify(state.sakVoice));
   renderSakVoice();
+}
+
+function showPlayerSakVoice(text, detail = {}) {
+  window.clearTimeout(playerSakVoiceHideTimer);
+  state.playerSakVoice = {
+    label: detail.label || "sakちゃん",
+    text,
+    at: Date.now(),
+  };
+  renderPlayerSakVoice();
+  window.clearTimeout(playerSakVoiceTimer);
+  playerSakVoiceTimer = window.setTimeout(hidePlayerSakVoice, 6200);
+}
+
+function hidePlayerSakVoice() {
+  if (!state.playerSakVoice) return;
+  state.playerSakVoice = null;
+  window.clearTimeout(playerSakVoiceTimer);
+  window.clearTimeout(playerSakVoiceHideTimer);
+  if (!els.playerSakVoice) return;
+  els.playerSakVoice.classList.remove("show");
+  playerSakVoiceHideTimer = window.setTimeout(renderPlayerSakVoice, 240);
 }
 
 function sakVoiceLine(event, track, detail = {}) {
@@ -1531,6 +1564,7 @@ function makePlaylistChip(value, label) {
   button.className = `playlist-chip${state.view === value ? " active" : ""}`;
   button.textContent = label;
   button.addEventListener("click", () => {
+    hidePlayerSakVoice();
     state.view = value;
     els.view.value = value;
     state.page = 1;
@@ -1547,6 +1581,7 @@ function makeChip(label, value) {
   if (value === KARAOKE_FILTER) button.classList.add("karaoke-filter");
   button.textContent = label;
   button.addEventListener("click", () => {
+    hidePlayerSakVoice();
     state.tag = state.tag === value ? "" : value;
     state.page = 1;
     render();
@@ -1616,9 +1651,13 @@ function renderTrack(track) {
   favorite.textContent = state.favorites.has(track.id) ? "★" : "☆";
   favorite.addEventListener("click", (event) => {
     event.stopPropagation();
+    hidePlayerSakVoice();
     toggleFavorite(track.id);
   });
-  node.addEventListener("click", () => toggleDetail(track.id));
+  node.addEventListener("click", () => {
+    hidePlayerSakVoice();
+    toggleDetail(track.id);
+  });
   if (expanded) node.append(renderInlineDetail(track));
   return node;
 }
