@@ -1108,6 +1108,19 @@ h1 {
   padding: 8px;
 }
 
+.wav-upload-button {
+  min-height: 36px;
+  border: 1px solid rgba(255, 205, 91, 0.46);
+  border-radius: 8px;
+  background: rgba(255, 205, 91, 0.13);
+  color: #ffd166;
+  font-weight: 900;
+}
+
+.wav-upload-button:disabled {
+  opacity: 0.6;
+}
+
 .wav-file-field small {
   color: rgba(243, 238, 240, 0.52);
   font-size: 0.75rem;

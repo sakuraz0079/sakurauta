@@ -1,4 +1,5 @@
 ﻿const API_URL = "https://script.google.com/macros/s/AKfycbyh4854enNZlGObSJu3qc3_t3MqD6lO9afRWbWLkjNcQpfCu1P8GXrQPCyPjbdZFzy3RQ/exec";
+const WAV_UPLOAD_URL = "https://sakurauta-wav-upload.sakuraz0079.workers.dev";
 const CACHE_KEY = "utawav.tracks";
 const FAVORITES_KEY = "utawav.favorites";
 const RECENT_KEY = "utawav.recent";
@@ -6,6 +7,7 @@ const LAST_TRACK_KEY = "utawav.lastTrack";
 const DAILY_PICK_HISTORY_KEY = "utawav.dailyPickHistory";
 const SEARCH_HISTORY_KEY = "utawav.searchHistory";
 const EDIT_TOKEN_KEY = "utawav.editToken";
+const UPLOAD_TOKEN_KEY = "utawav.uploadToken";
 const SHUFFLE_KEY = "utawav.shuffle";
 const REPEAT_KEY = "utawav.repeat";
 const PLAYLISTS_KEY = "utawav.playlists";
@@ -355,13 +357,11 @@ async function submitTrackAdd(form) {
   document.activeElement?.blur?.();
   const fields = addTrackFieldsFromForm(form);
   if (!fields.title) {
-    state.addError = "曲名を入力してください";
-    render();
+    setAddFormFeedback(form, "error", "曲名を入力してください");
     return;
   }
   if (!fields.url) {
-    state.addError = "WAV URLを入力してください";
-    render();
+    setAddFormFeedback(form, "error", "WAV URLを入力してください");
     return;
   }
 
@@ -369,13 +369,14 @@ async function submitTrackAdd(form) {
   state.addError = "";
   state.addStatus = { type: "saving", text: "曲を追加中" };
   els.sync.textContent = "曲を追加中";
-  render();
+  setAddFormSaving(form, true);
+  setAddFormFeedback(form, "saving", "曲を追加中");
 
   try {
     const result = await saveNewTrack(fields);
     state.addStatus = { type: "syncing", text: result?.opaque ? "追加リクエスト送信・同期確認中" : "追加・同期確認中" };
     els.sync.textContent = state.addStatus.text;
-    render();
+    setAddFormFeedback(form, "syncing", state.addStatus.text);
 
     const tracks = await reloadTracksFromApi({ status: "追加の同期確認中", successPrefix: "追加・同期" });
     const addedId = result?.data?.id || result?.id;
@@ -400,7 +401,8 @@ async function submitTrackAdd(form) {
     state.addError = error?.message ? `追加できませんでした: ${error.message}` : "追加できませんでした";
     state.addStatus = { type: "error", text: state.addError };
     els.sync.textContent = state.addError;
-    render();
+    setAddFormSaving(form, false);
+    setAddFormFeedback(form, "error", state.addError);
   }
 }
 
@@ -520,6 +522,15 @@ function getEditToken() {
   if (!token) {
     token = window.prompt("編集パスコードを入力してください")?.trim() || "";
     if (token) localStorage.setItem(EDIT_TOKEN_KEY, token);
+  }
+  return token;
+}
+
+function getUploadToken() {
+  let token = localStorage.getItem(UPLOAD_TOKEN_KEY) || "";
+  if (!token) {
+    token = window.prompt("R2アップロード用トークンを入力してください")?.trim() || "";
+    if (token) localStorage.setItem(UPLOAD_TOKEN_KEY, token);
   }
   return token;
 }
@@ -705,7 +716,7 @@ function renderAddTrackPanel() {
 
   if (state.addStatus?.text) {
     const status = document.createElement("p");
-    status.className = `edit-sync-status ${state.addStatus.type || "info"}`;
+    status.className = `add-form-feedback edit-sync-status ${state.addStatus.type || "info"}`;
     status.textContent = state.addStatus.text;
     form.append(status);
   }
@@ -747,11 +758,62 @@ function makeWavFileInput() {
     if (!file) return;
     applyParsedFileName(field.closest("form"), file.name);
   });
+  const upload = document.createElement("button");
+  upload.type = "button";
+  upload.className = "wav-upload-button";
+  upload.textContent = "R2へアップロード";
+  upload.addEventListener("click", () => uploadSelectedWav(field.closest("form"), input, upload));
   const hint = document.createElement("small");
   hint.className = "wav-file-message";
-  hint.textContent = "ファイル名から曲名・Re・バージョンを自動入力します";
-  field.append(input, hint);
+  hint.textContent = "ファイル名から曲名・Re・バージョンを自動入力し、R2へ保存できます";
+  field.append(input, upload, hint);
   return field;
+}
+
+async function uploadSelectedWav(form, input, button) {
+  const file = input?.files?.[0];
+  if (!file) {
+    setAddFormFeedback(form, "error", "先にWAVを選択してください");
+    return;
+  }
+
+  const token = getUploadToken();
+  if (!token) {
+    setAddFormFeedback(form, "error", "アップロード用トークンが必要です");
+    return;
+  }
+
+  const fileName = form?.elements?.fileName?.value || file.name;
+  setUploadButtonState(button, true);
+  setAddFormFeedback(form, "saving", "R2へアップロード中");
+
+  try {
+    const body = new FormData();
+    body.set("file", file);
+    body.set("fileName", fileName);
+    const response = await fetch(WAV_UPLOAD_URL, {
+      method: "POST",
+      headers: { "X-Upload-Token": token },
+      body,
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || payload?.ok === false) {
+      throw new Error(payload?.error || `Upload error ${response.status}`);
+    }
+    setFormValue(form, "url", payload.url || "");
+    setFormValue(form, "fileName", payload.fileName || fileName);
+    setAddFormFeedback(form, "success", "R2アップロード完了・WAV URLを入力しました");
+  } catch (error) {
+    setAddFormFeedback(form, "error", error?.message ? `アップロードできませんでした: ${error.message}` : "アップロードできませんでした");
+  } finally {
+    setUploadButtonState(button, false);
+  }
+}
+
+function setUploadButtonState(button, uploading) {
+  if (!button) return;
+  button.disabled = Boolean(uploading);
+  button.textContent = uploading ? "アップロード中" : "R2へアップロード";
 }
 
 function applyParsedFileName(form, fileName) {
@@ -774,6 +836,32 @@ function applyParsedFileName(form, fileName) {
 function setFormValue(form, name, value) {
   const field = form?.elements?.[name];
   if (field) field.value = value;
+}
+
+function setAddFormSaving(form, saving) {
+  const save = form?.querySelector("button[type='submit']");
+  if (!save) return;
+  save.disabled = Boolean(saving);
+  save.textContent = saving ? "追加中" : "追加";
+}
+
+function setAddFormFeedback(form, type, text) {
+  state.addError = type === "error" ? text : "";
+  state.addStatus = text ? { type, text } : null;
+  if (text) els.sync.textContent = text;
+
+  let status = form?.querySelector(".add-form-feedback");
+  if (!status) {
+    status = document.createElement("p");
+    status.className = "add-form-feedback edit-sync-status";
+    const actions = form?.querySelector(".edit-actions");
+    if (actions) form.insertBefore(status, actions);
+    else form?.append(status);
+  }
+
+  status.className = `add-form-feedback edit-sync-status ${type || "info"}`;
+  status.textContent = text || "";
+  status.hidden = !text;
 }
 
 function makeAddTrackDiagnosis() {
