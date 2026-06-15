@@ -1895,9 +1895,10 @@ function latestTracks(tracks, limit) {
     .slice(0, limit);
 }
 
-function playTrack(track, { autoplay = true } = {}) {
+function playTrack(track, { autoplay = true, revealDetail = false } = {}) {
   if (!track.url) return;
   if (autoplay) triggerStageTransfer(track.id);
+  if (revealDetail) keepTrackInView(track.id);
   state.currentId = track.id;
   if (autoplay) expandPlayerForPlayback();
   setPlaybackStatus(autoplay ? "loading" : "ready", autoplay ? "\u8aad\u307f\u8fbc\u307f\u4e2d" : "");
@@ -1918,6 +1919,7 @@ function playTrack(track, { autoplay = true } = {}) {
     });
   }
   render();
+  if (revealDetail) scrollTrackIntoView(track.id);
 }
 
 function playNext() {
@@ -1936,7 +1938,7 @@ function playAdjacent(direction, { autoplay = true } = {}) {
     const base = currentIndex === -1 ? 0 : currentIndex;
     next = list[base + direction];
   }
-  if (next) playTrack(next, { autoplay });
+  if (next) playTrack(next, { autoplay, revealDetail: true });
 }
 
 function togglePlayback() {
