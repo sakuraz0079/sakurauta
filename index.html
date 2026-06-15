@@ -11,9 +11,17 @@
     <link rel="icon" href="./icon-192.png" type="image/png">
     <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
     <link rel="manifest" href="./manifest.webmanifest">
-    <link rel="stylesheet" href="./style.css?v=20260615-3">
+    <link rel="stylesheet" href="./style.css?v=20260615-4">
   </head>
   <body>
+    <aside class="update-notice" id="updateNotice" aria-live="polite" hidden>
+      <span>新しいバージョンがあります</span>
+      <div class="update-notice-actions">
+        <button id="dismissUpdateButton" type="button">あとで</button>
+        <button id="applyUpdateButton" class="primary" type="button">更新する</button>
+      </div>
+    </aside>
+
     <div class="app-shell player-compact">
       <header class="topbar compact">
         <img class="brand-logo" src="./icon/sak-uta-logo-transparent.png" alt="sak_Uta">
@@ -128,6 +136,6 @@
       </article>
     </template>
 
-    <script src="./app.js?v=20260615-3" type="module"></script>
+    <script src="./app.js?v=20260615-4" type="module"></script>
   </body>
 </html>

@@ -15,6 +15,10 @@ const KARAOKE_FILTER = "__karaoke_ready";
 const PAGE_SIZE = 20;
 const EXCLUDED_GENRE_TAGS = new Set(["mastering"]);
 const PARAMS = new URLSearchParams(location.search);
+const UPDATE_CHECK_INTERVAL = 60 * 60 * 1000;
+
+let waitingServiceWorker = null;
+let isApplyingUpdate = false;
 
 const state = {
   tracks: [],
@@ -90,6 +94,9 @@ const els = {
   prevPage: document.querySelector("#prevPageButton"),
   nextPage: document.querySelector("#nextPageButton"),
   page: document.querySelector("#pageLabel"),
+  updateNotice: document.querySelector("#updateNotice"),
+  applyUpdate: document.querySelector("#applyUpdateButton"),
+  dismissUpdate: document.querySelector("#dismissUpdateButton"),
 };
 
 init();
@@ -107,12 +114,14 @@ async function init() {
   updatePlayerCompact();
   updatePlayerControls();
   drawWaveform();
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./sw.js").catch(() => {});
-  }
+  setupServiceWorkerUpdates();
 }
 
 function bindEvents() {
+  els.applyUpdate.addEventListener("click", applyServiceWorkerUpdate);
+  els.dismissUpdate.addEventListener("click", () => {
+    els.updateNotice.hidden = true;
+  });
   els.search.addEventListener("input", () => {
     state.query = els.search.value.trim().toLowerCase();
     state.page = 1;
@@ -1923,6 +1932,52 @@ function playTrack(track, { autoplay = true, revealDetail = false } = {}) {
   }
   render();
   if (revealDetail) scrollTrackIntoView(track.id);
+}
+
+async function setupServiceWorkerUpdates() {
+  if (!("serviceWorker" in navigator)) return;
+  try {
+    const registration = await navigator.serviceWorker.register("./sw.js");
+    if (registration.waiting && navigator.serviceWorker.controller) {
+      showUpdateNotice(registration.waiting);
+    }
+
+    registration.addEventListener("updatefound", () => {
+      const installing = registration.installing;
+      if (!installing) return;
+      installing.addEventListener("statechange", () => {
+        if (installing.state === "installed" && navigator.serviceWorker.controller) {
+          showUpdateNotice(registration.waiting || installing);
+        }
+      });
+    });
+
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!isApplyingUpdate) return;
+      location.reload();
+    });
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") registration.update().catch(() => {});
+    });
+    window.setInterval(() => registration.update().catch(() => {}), UPDATE_CHECK_INTERVAL);
+    registration.update().catch(() => {});
+  } catch {
+    // The app remains usable when service workers are unavailable.
+  }
+}
+
+function showUpdateNotice(worker) {
+  waitingServiceWorker = worker;
+  els.updateNotice.hidden = false;
+}
+
+function applyServiceWorkerUpdate() {
+  if (!waitingServiceWorker) return;
+  isApplyingUpdate = true;
+  els.applyUpdate.disabled = true;
+  els.applyUpdate.textContent = "更新中";
+  waitingServiceWorker.postMessage({ type: "SKIP_WAITING" });
 }
 
 function playNext() {

@@ -1,9 +1,9 @@
-const CACHE_NAME = "sak-uta-app-v89";
+const CACHE_NAME = "sak-uta-app-v90";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./style.css?v=20260615-3",
-  "./app.js?v=20260615-3",
+  "./style.css?v=20260615-4",
+  "./app.js?v=20260615-4",
   "./icon/sak-chan-face.png",
   "./manifest.webmanifest",
   "./icon/IMG_2956.png",
@@ -16,8 +16,15 @@ const APP_SHELL = [
 ];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
-  self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) =>
+      Promise.all(APP_SHELL.map((url) => cache.add(new Request(url, { cache: "reload" }))))
+    )
+  );
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {

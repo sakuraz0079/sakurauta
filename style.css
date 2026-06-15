@@ -28,6 +28,61 @@ body {
   color: var(--ink);
 }
 
+.update-notice {
+  position: fixed;
+  top: max(10px, env(safe-area-inset-top));
+  right: 12px;
+  left: 12px;
+  z-index: 60;
+  display: flex;
+  width: min(calc(100% - 24px), 720px);
+  min-height: 52px;
+  margin: 0 auto;
+  padding: 8px 8px 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(24, 24, 27, 0.96);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.48);
+  backdrop-filter: blur(18px);
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.update-notice[hidden] {
+  display: none;
+}
+
+.update-notice span {
+  min-width: 0;
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.update-notice-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+.update-notice button {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.update-notice button.primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
 button,
 input,
 select {
