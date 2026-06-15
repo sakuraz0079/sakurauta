@@ -25,7 +25,8 @@ const state = {
   query: "",
   sort: "recent",
   view: "all",
-  tag: "",
+  tags: new Set(),
+  playlistOpen: false,
   currentId: "",
   detailId: "",
   dailyPickId: "",
@@ -60,7 +61,6 @@ const els = {
   search: document.querySelector("#searchInput"),
   clearSearch: document.querySelector("#clearSearchButton"),
   searchHistory: document.querySelector("#searchHistoryChips"),
-  sort: document.querySelector("#sortSelect"),
   view: document.querySelector("#viewSelect"),
   tags: document.querySelector("#tagChips"),
   count: document.querySelector("#countLabel"),
@@ -91,6 +91,9 @@ const els = {
   playlistChips: document.querySelector("#playlistChips"),
   playlistForm: document.querySelector("#playlistForm"),
   playlistName: document.querySelector("#playlistNameInput"),
+  playlistBox: document.querySelector("#playlistBox"),
+  playlistToggle: document.querySelector("#playlistToggleButton"),
+  playlistCurrentLabel: document.querySelector("#playlistCurrentLabel"),
   prevPage: document.querySelector("#prevPageButton"),
   nextPage: document.querySelector("#nextPageButton"),
   page: document.querySelector("#pageLabel"),
@@ -108,6 +111,7 @@ async function init() {
   renderSearchHistory();
   renderPlaylistOptions();
   await loadTracks();
+  openSharedTrack();
   restoreLastTrack();
   state.compactPlayer = true;
   state.playerManualCompact = false;
@@ -145,13 +149,7 @@ function bindEvents() {
     els.search.focus();
   });
 
-  els.sort.addEventListener("change", () => {
-    state.sort = els.sort.value;
-    state.page = 1;
-    render();
-  });
-
-  els.view.addEventListener("change", () => {
+  els.view?.addEventListener("change", () => {
     state.view = els.view.value;
     state.page = 1;
     renderPlaylistOptions();
@@ -168,6 +166,10 @@ function bindEvents() {
     render();
   });
   els.newPlaylist.addEventListener("click", showPlaylistForm);
+  els.playlistToggle.addEventListener("click", () => {
+    state.playlistOpen = !state.playlistOpen;
+    updatePlaylistDisclosure();
+  });
   els.deletePlaylist.addEventListener("click", deleteCurrentPlaylist);
   els.playlistForm.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -769,7 +771,7 @@ function render() {
     const message = document.createElement("p");
     message.textContent = "\u8a72\u5f53\u3059\u308b\u66f2\u304c\u3042\u308a\u307e\u305b\u3093";
     empty.append(message);
-    if (state.query || state.tag) {
+    if (state.query || state.tags.size) {
       const clear = document.createElement("button");
       clear.type = "button";
       clear.textContent = "\u691c\u7d22\u30fb\u7d5e\u308a\u8fbc\u307f\u3092\u30af\u30ea\u30a2";
@@ -1389,15 +1391,15 @@ function updateClearSearchButton() {
 function activeFilterLabels() {
   const labels = [];
   if (state.query) labels.push(`\u691c\u7d22: ${els.search.value.trim()}`);
-  if (state.tag === KARAOKE_FILTER) labels.push("\u7d5e\u308a\u8fbc\u307f: \ud83c\udfa4 \u6b4c\u3048\u308b");
-  else if (state.tag) labels.push(`\u7d5e\u308a\u8fbc\u307f: ${state.tag}`);
+  const selected = [...state.tags].map((tag) => tag === KARAOKE_FILTER ? "\ud83c\udfa4 \u6b4c\u3048\u308b" : tag);
+  if (selected.length) labels.push(`\u7d5e\u308a\u8fbc\u307f: ${selected.join(" + ")}`);
   return labels;
 }
 
 function clearSearchAndTagFilters() {
   els.search.value = "";
   state.query = "";
-  state.tag = "";
+  state.tags.clear();
   state.page = 1;
   updateClearSearchButton();
   render();
@@ -1428,7 +1430,14 @@ function renderPlaylistOptions() {
     : "all";
   state.view = els.view.value;
   els.deletePlaylist.hidden = !state.playlists.some((playlist) => playlist.id === state.view);
+  els.playlistCurrentLabel.textContent = els.view.selectedOptions[0]?.textContent || "\u3059\u3079\u3066";
   renderPlaylistChips(fixed);
+  updatePlaylistDisclosure();
+}
+
+function updatePlaylistDisclosure() {
+  els.playlistBox.hidden = !state.playlistOpen;
+  els.playlistToggle.setAttribute("aria-expanded", String(state.playlistOpen));
 }
 
 function renderPlaylistChips(fixed) {
@@ -1449,6 +1458,7 @@ function makePlaylistChip(value, label) {
   button.addEventListener("click", () => {
     state.view = value;
     els.view.value = value;
+    state.playlistOpen = false;
     state.page = 1;
     renderPlaylistOptions();
     render();
@@ -1459,11 +1469,14 @@ function makePlaylistChip(value, label) {
 function makeChip(label, value) {
   const button = document.createElement("button");
   button.type = "button";
-  button.className = `chip${state.tag === value ? " active" : ""}`;
+  const active = value === "" ? state.tags.size === 0 : state.tags.has(value);
+  button.className = `chip${active ? " active" : ""}`;
   if (value === KARAOKE_FILTER) button.classList.add("karaoke-filter");
   button.textContent = label;
   button.addEventListener("click", () => {
-    state.tag = state.tag === value ? "" : value;
+    if (value === "") state.tags.clear();
+    else if (state.tags.has(value)) state.tags.delete(value);
+    else state.tags.add(value);
     state.page = 1;
     render();
   });
@@ -1588,6 +1601,9 @@ function renderInlineDetail(track) {
     render();
   }));
   actions.append(makeAction(state.favorites.has(track.id) ? "★ \u304a\u6c17\u306b\u5165\u308a" : "☆ \u304a\u6c17\u306b\u5165\u308a", () => toggleFavorite(track.id)));
+  const share = makeAction("\u5171\u6709", () => shareTrack(track, share));
+  share.setAttribute("aria-label", `${track.title}\u3092\u5171\u6709`);
+  actions.append(share);
   if (state.playlists.length) {
     const select = document.createElement("select");
     select.setAttribute("aria-label", "\u8ffd\u52a0\u5148\u30ea\u30b9\u30c8");
@@ -1872,8 +1888,10 @@ function makeStat(text, className = "") {
 function filterTracks() {
   let tracks = [...state.tracks];
   if (state.query) tracks = tracks.filter((track) => track.searchText.includes(state.query));
-  if (state.tag === KARAOKE_FILTER) tracks = tracks.filter((track) => track.karaokeReady);
-  else if (state.tag) tracks = tracks.filter((track) => track.genreTags.includes(state.tag));
+  for (const tag of state.tags) {
+    if (tag === KARAOKE_FILTER) tracks = tracks.filter((track) => track.karaokeReady);
+    else tracks = tracks.filter((track) => track.genreTags.includes(tag));
+  }
   if (state.view === "latest10") tracks = latestTracks(tracks, 10);
   if (state.view === "favorites") tracks = tracks.filter((track) => state.favorites.has(track.id));
   if (state.view === "recentlyPlayed") tracks = tracks.filter((track) => state.recent.includes(track.id));
@@ -2215,6 +2233,46 @@ function toggleDetail(id) {
   render();
 }
 
+function openSharedTrack() {
+  const sharedId = PARAMS.get("track");
+  if (!sharedId) return;
+  const track = state.tracks.find((item) => String(item.id) === sharedId);
+  if (!track) return;
+  keepTrackInView(track.id);
+  render();
+  scrollTrackIntoView(track.id);
+}
+
+async function shareTrack(track, button) {
+  const url = new URL("./share.html", location.href);
+  url.searchParams.set("track", track.id);
+  const data = {
+    title: `${track.title} - ${track.artist || "sak_Uta"}`,
+    text: [track.title, track.artist].filter(Boolean).join(" / "),
+    url: url.href,
+  };
+
+  try {
+    if (navigator.share) {
+      await navigator.share(data);
+      return;
+    }
+    await navigator.clipboard.writeText(url.href);
+    showShareFeedback(button, "\u30ea\u30f3\u30af\u3092\u30b3\u30d4\u30fc");
+  } catch (error) {
+    if (error?.name === "AbortError") return;
+    showShareFeedback(button, "\u5171\u6709\u3067\u304d\u307e\u305b\u3093");
+  }
+}
+
+function showShareFeedback(button, text) {
+  const original = button.textContent;
+  button.textContent = text;
+  window.setTimeout(() => {
+    if (button.isConnected) button.textContent = original;
+  }, 1800);
+}
+
 function keepTrackInView(id) {
   if (!id) return;
   state.detailId = id;
@@ -2223,7 +2281,7 @@ function keepTrackInView(id) {
   if (!tracks.some((track) => track.id === id)) {
     els.search.value = "";
     state.query = "";
-    state.tag = "";
+    state.tags.clear();
     if (!playlistContainsTrack(state.view, id)) {
       state.view = "all";
       els.view.value = "all";

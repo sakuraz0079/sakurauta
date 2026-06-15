@@ -243,15 +243,15 @@ h1 {
 
 .search-line {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 58px;
+  grid-template-columns: minmax(0, 1fr) 84px;
   gap: 10px;
 }
 
-.sort-mini {
+.playlist-compact-button {
   display: grid;
-  grid-template-columns: 18px 1fr;
+  grid-template-columns: 18px minmax(0, 1fr);
   align-items: center;
-  gap: 2px;
+  gap: 5px;
   min-height: 52px;
   padding: 0 8px;
   border: 1px solid var(--line);
@@ -261,17 +261,18 @@ h1 {
   box-shadow: var(--shadow);
 }
 
-.sort-mini select {
-  min-width: 0;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: var(--ink);
+.playlist-compact-button span {
+  color: var(--accent);
+  font-size: 1rem;
 }
 
-.sort-mini option {
-  background: var(--panel);
+.playlist-compact-button strong {
+  min-width: 0;
   color: var(--ink);
+  font-size: 0.72rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .search-history {
@@ -330,8 +331,8 @@ h1 {
 
 .playlist-box {
   display: grid;
-  gap: 7px;
-  padding: 8px 10px;
+  gap: 6px;
+  padding: 6px 8px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(17, 17, 19, 0.78);
@@ -348,6 +349,10 @@ h1 {
   color: var(--muted);
   font-size: 0.72rem;
   font-weight: 700;
+}
+
+.playlist-box[hidden] {
+  display: none;
 }
 
 .playlist-head div {
@@ -506,6 +511,12 @@ h1 {
   border-color: var(--accent);
   background: var(--accent);
   color: #fff;
+}
+
+.chip.active::before {
+  content: "✓";
+  margin-right: 5px;
+  font-size: 0.72rem;
 }
 
 .chip.karaoke-filter {

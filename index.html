@@ -11,7 +11,7 @@
     <link rel="icon" href="./icon-192.png?v=20260615-6" type="image/png">
     <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png?v=20260615-6">
     <link rel="manifest" href="./manifest.webmanifest?v=20260615-6">
-    <link rel="stylesheet" href="./style.css?v=20260615-6">
+    <link rel="stylesheet" href="./style.css?v=20260615-8">
   </head>
   <body>
     <aside class="update-notice" id="updateNotice" aria-live="polite" hidden>
@@ -37,19 +37,14 @@
               <input id="searchInput" type="search" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="search" placeholder="曲名、アーティスト、メモで検索" aria-label="検索">
               <button id="clearSearchButton" class="clear-search-button" type="button" aria-label="検索をクリア" title="検索をクリア" hidden>×</button>
             </div>
-            <label class="sort-mini">
-              <span>↕</span>
-              <select id="sortSelect" aria-label="並び替え">
-                <option value="recent">新</option>
-                <option value="title">曲</option>
-                <option value="artist">人</option>
-                <option value="favorite">★</option>
-              </select>
-            </label>
+            <button class="playlist-compact-button" id="playlistToggleButton" type="button" aria-expanded="false">
+              <span aria-hidden="true">☷</span>
+              <strong id="playlistCurrentLabel">すべて</strong>
+            </button>
           </div>
           <div class="search-history" id="searchHistoryChips" aria-label="検索履歴"></div>
 
-          <div class="playlist-box">
+          <div class="playlist-box" id="playlistBox" hidden>
             <div class="playlist-head">
               <span>再生リスト</span>
               <div>
@@ -136,6 +131,6 @@
       </article>
     </template>
 
-    <script src="./app.js?v=20260615-6" type="module"></script>
+    <script src="./app.js?v=20260615-8" type="module"></script>
   </body>
 </html>
