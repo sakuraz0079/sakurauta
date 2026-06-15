@@ -1,5 +1,6 @@
 ﻿const API_URL = "https://script.google.com/macros/s/AKfycbxNHOf1ueQvlaOSZSgxSt8_Nq5CDwQVxUWLlT64dpSy3ha8NBFZH4JX_2pEEdB1wefQdw/exec";
 const WAV_UPLOAD_URL = "https://sakurauta-wav-upload.sakuraz0079.workers.dev";
+const SHARE_WORKER_URL = "https://sakuta-share.sakuraz0079.workers.dev";
 const CACHE_KEY = "utawav.tracks";
 const FAVORITES_KEY = "utawav.favorites";
 const RECENT_KEY = "utawav.recent";
@@ -8,6 +9,7 @@ const DAILY_PICK_HISTORY_KEY = "utawav.dailyPickHistory";
 const SEARCH_HISTORY_KEY = "utawav.searchHistory";
 const EDIT_TOKEN_KEY = "utawav.editToken";
 const UPLOAD_TOKEN_KEY = "utawav.uploadToken";
+const SHARE_TOKEN_KEY = "utawav.shareToken";
 const SHUFFLE_KEY = "utawav.shuffle";
 const REPEAT_KEY = "utawav.repeat";
 const PLAYLISTS_KEY = "utawav.playlists";
@@ -612,6 +614,15 @@ async function getUploadToken() {
   if (!token) {
     token = await requestSecretInput("R2アップロード用トークン", "Cloudflare Workerに設定したUPLOAD_TOKENを入力してください");
     if (token) localStorage.setItem(UPLOAD_TOKEN_KEY, token);
+  }
+  return token;
+}
+
+async function getShareToken() {
+  let token = localStorage.getItem(SHARE_TOKEN_KEY) || "";
+  if (!token) {
+    token = await requestSecretInput("共有リンク用パスコード", "外部向けの共有リンクを発行するためのパスコードを入力してください");
+    if (token) localStorage.setItem(SHARE_TOKEN_KEY, token);
   }
   return token;
 }
@@ -2248,12 +2259,46 @@ function openSharedTrack() {
 }
 
 async function shareTrack(track, button) {
-  const url = new URL("./share.html", location.href);
-  url.searchParams.set("track", track.id);
+  const shareToken = await getShareToken();
+  if (!shareToken) return;
+
+  showShareFeedback(button, "リンクを作成中");
+
+  let share;
+  try {
+    const response = await fetch(`${SHARE_WORKER_URL}/api/shares`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Share-Admin-Token": shareToken,
+      },
+      body: JSON.stringify({
+        expiresInDays: 30,
+        track: {
+          id: track.id,
+          title: track.title,
+          artist: track.artist,
+          version: track.version,
+          fileName: track.fileName,
+          sourceUrl: track.url,
+        },
+      }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.url) {
+      if (response.status === 401) localStorage.removeItem(SHARE_TOKEN_KEY);
+      throw new Error(payload?.error || `Share API error ${response.status}`);
+    }
+    share = payload;
+  } catch {
+    showShareFeedback(button, "リンクを作れません");
+    return;
+  }
+
   const data = {
     title: `${track.title} - ${track.artist || "sak_Uta"}`,
     text: [track.title, track.artist].filter(Boolean).join(" / "),
-    url: url.href,
+    url: share.url,
   };
 
   try {
@@ -2261,7 +2306,7 @@ async function shareTrack(track, button) {
       await navigator.share(data);
       return;
     }
-    await navigator.clipboard.writeText(url.href);
+    await navigator.clipboard.writeText(share.url);
     showShareFeedback(button, "\u30ea\u30f3\u30af\u3092\u30b3\u30d4\u30fc");
   } catch (error) {
     if (error?.name === "AbortError") return;

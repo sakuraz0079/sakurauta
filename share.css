@@ -57,44 +57,51 @@ body {
   aspect-ratio: 1;
   margin: 0 auto;
   isolation: isolate;
+  perspective: 900px;
 }
 
 .shared-artwork {
   position: relative;
   z-index: 2;
   display: block;
-  width: 100%;
-  height: 100%;
+  width: 96%;
+  height: 96%;
   border-radius: 8px;
   object-fit: cover;
   box-shadow: 0 18px 44px rgba(239, 23, 68, 0.18);
+  transform-origin: 50% 52%;
+  will-change: transform, filter, box-shadow;
+  animation: artworkDrift 9s ease-in-out infinite;
 }
 
 .artwork-wave {
   position: absolute;
-  inset: 7%;
+  inset: 4%;
   z-index: 1;
-  border: 2px solid rgba(239, 23, 68, 0.42);
+  border: 3px solid rgba(239, 23, 68, 0.58);
   border-radius: 50%;
   opacity: 0;
   pointer-events: none;
+  filter: drop-shadow(0 0 12px rgba(239, 23, 68, 0.8));
+  will-change: transform, opacity, filter;
 }
 
 .wave-two {
-  inset: 12%;
-  border-color: rgba(255, 174, 0, 0.38);
+  inset: 9%;
+  border-color: rgba(255, 174, 0, 0.58);
+  filter: drop-shadow(0 0 12px rgba(255, 174, 0, 0.72));
 }
 
 .artwork-stage.is-playing .shared-artwork {
-  animation: artworkBreathe 2.6s ease-in-out infinite;
+  animation: artworkAmbient 6.8s ease-in-out infinite;
 }
 
-.artwork-stage.is-playing .artwork-wave {
-  animation: artworkWave 2.6s ease-out infinite;
+.artwork-stage.is-playing .wave-one {
+  animation: artworkWaveOne 3.2s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
 }
 
 .artwork-stage.is-playing .wave-two {
-  animation-delay: 1.3s;
+  animation: artworkWaveTwo 4.1s cubic-bezier(0.22, 0.61, 0.36, 1) 0.75s infinite;
 }
 
 .shared-copy {
@@ -169,6 +176,7 @@ body {
 }
 
 .share-controls .share-play {
+  position: relative;
   width: 66px;
   height: 66px;
   border-color: var(--accent);
@@ -178,28 +186,40 @@ body {
 
 .share-play::before {
   content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
   width: 0;
   height: 0;
-  margin-left: 4px;
   border-top: 10px solid transparent;
   border-bottom: 10px solid transparent;
   border-left: 15px solid #fff;
+  transform: translate(-38%, -50%);
 }
 
 .share-play.is-playing {
-  grid-template-columns: 7px 7px;
-  gap: 6px;
+  display: block;
 }
 
 .share-play.is-playing::before,
 .share-play.is-playing::after {
   content: "";
+  position: absolute;
+  top: 50%;
   width: 7px;
   height: 22px;
-  margin: 0;
   border: 0;
   border-radius: 2px;
   background: #fff;
+  transform: translate(-50%, -50%);
+}
+
+.share-play.is-playing::before {
+  left: calc(50% - 6px);
+}
+
+.share-play.is-playing::after {
+  left: calc(50% + 6px);
 }
 
 .shared-track audio {
@@ -218,29 +238,108 @@ body {
   color: #ff9caf;
 }
 
-@keyframes artworkBreathe {
+@keyframes artworkDrift {
   0%,
   100% {
-    transform: scale(1);
-    filter: saturate(1);
+    transform: translate3d(-3px, 3px, 0) rotateZ(-1deg) rotateX(0.8deg) scale(0.985);
+    filter: saturate(1.02) brightness(0.98);
   }
 
-  50% {
-    transform: scale(1.025);
-    filter: saturate(1.18) brightness(1.06);
+  25% {
+    transform: translate3d(5px, -5px, 0) rotateZ(0.8deg) rotateY(-1.5deg) scale(1.005);
+    filter: saturate(1.08) brightness(1.02);
+  }
+
+  52% {
+    transform: translate3d(1px, 5px, 0) rotateZ(1.4deg) rotateX(-1deg) scale(0.99);
+    filter: saturate(1.04) brightness(0.99);
+  }
+
+  78% {
+    transform: translate3d(-6px, -3px, 0) rotateZ(-0.6deg) rotateY(1.6deg) scale(1.01);
+    filter: saturate(1.1) brightness(1.03);
   }
 }
 
-@keyframes artworkWave {
+@keyframes artworkAmbient {
   0% {
-    opacity: 0.7;
-    transform: scale(0.92);
+    transform: translate3d(-8px, 5px, 0) rotateZ(-1.8deg) rotateX(1deg) scale(0.98);
+    filter: saturate(1.05) brightness(0.97) hue-rotate(-3deg);
+    box-shadow: 0 18px 44px rgba(239, 23, 68, 0.2);
   }
 
-  75%,
+  18% {
+    transform: translate3d(7px, -10px, 0) rotateZ(1.7deg) rotateY(-2deg) scale(1.055);
+    filter: saturate(1.3) brightness(1.1) hue-rotate(2deg);
+    box-shadow:
+      -12px 24px 56px rgba(239, 23, 68, 0.36),
+      14px 5px 38px rgba(255, 174, 0, 0.2);
+  }
+
+  38% {
+    transform: translate3d(11px, 4px, 0) rotateZ(2.2deg) rotateX(-1.5deg) scale(1.015);
+    filter: saturate(1.16) brightness(1.02) hue-rotate(5deg);
+    box-shadow:
+      10px 21px 48px rgba(239, 23, 68, 0.3),
+      -8px 3px 32px rgba(255, 174, 0, 0.16);
+  }
+
+  61% {
+    transform: translate3d(-5px, 9px, 0) rotateZ(-1.3deg) rotateY(2deg) scale(1.04);
+    filter: saturate(1.25) brightness(1.07) hue-rotate(0deg);
+    box-shadow:
+      0 26px 62px rgba(239, 23, 68, 0.42),
+      0 0 42px rgba(255, 174, 0, 0.2);
+  }
+
+  82% {
+    transform: translate3d(-12px, -6px, 0) rotateZ(-2.4deg) rotateX(1.6deg) scale(1.025);
+    filter: saturate(1.34) brightness(1.11) hue-rotate(-5deg);
+    box-shadow:
+      -8px 25px 58px rgba(239, 23, 68, 0.38),
+      12px 0 40px rgba(255, 174, 0, 0.2);
+  }
+
+  100% {
+    transform: translate3d(-8px, 5px, 0) rotateZ(-1.8deg) rotateX(1deg) scale(0.98);
+    filter: saturate(1.05) brightness(0.97) hue-rotate(-3deg);
+    box-shadow: 0 18px 44px rgba(239, 23, 68, 0.2);
+  }
+}
+
+@keyframes artworkWaveOne {
+  0% {
+    opacity: 0;
+    transform: rotate(-8deg) scale(0.82);
+    filter: drop-shadow(0 0 6px rgba(239, 23, 68, 0.9));
+  }
+
+  18% {
+    opacity: 0.92;
+  }
+
   100% {
     opacity: 0;
-    transform: scale(1.2);
+    transform: rotate(24deg) scale(1.32);
+    filter: drop-shadow(0 0 22px rgba(239, 23, 68, 0.35));
+  }
+}
+
+@keyframes artworkWaveTwo {
+  0% {
+    opacity: 0;
+    transform: rotate(14deg) scale(0.78);
+    filter: drop-shadow(0 0 6px rgba(255, 174, 0, 0.86));
+  }
+
+  20% {
+    opacity: 0.82;
+  }
+
+  100% {
+    opacity: 0;
+    transform: rotate(-30deg) scale(1.38);
+    filter: drop-shadow(0 0 24px rgba(255, 174, 0, 0.3));
   }
 }
 
@@ -252,6 +351,7 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .shared-artwork,
   .artwork-stage.is-playing .shared-artwork,
   .artwork-stage.is-playing .artwork-wave {
     animation: none;

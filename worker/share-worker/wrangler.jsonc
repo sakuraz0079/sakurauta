@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sakuta-share",
+  "main": "src/index.js",
+  "compatibility_date": "2026-06-15",
+  "workers_dev": true,
+  "kv_namespaces": [
+    {
+      "binding": "SHARE_LINKS",
+      "id": "e35ebfd991764d6e8063c1aa80504369"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "SAKURAUTA_WAVS",
+      "bucket_name": "songs"
+    }
+  ]
+}
