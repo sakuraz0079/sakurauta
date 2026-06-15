@@ -96,6 +96,7 @@ init();
 
 async function init() {
   bindEvents();
+  setupMediaSession();
   updateClearSearchButton();
   renderSearchHistory();
   renderPlaylistOptions();
@@ -219,12 +220,14 @@ function bindEvents() {
   els.audio.addEventListener("playing", () => setPlaybackStatus("playing", ""));
   els.audio.addEventListener("play", () => {
     state.isPlaying = true;
+    updateMediaSessionPlaybackState("playing");
     expandPlayerForPlayback();
     updatePlayerControls();
     render();
   });
   els.audio.addEventListener("pause", () => {
     state.isPlaying = false;
+    updateMediaSessionPlaybackState("paused");
     if (state.playbackStatus !== "error") setPlaybackStatus("idle", "");
     updatePlayerControls();
     render();
@@ -1981,6 +1984,93 @@ function updatePlayerInfo(track) {
   els.nowTitle.textContent = track.title;
   els.nowArtist.textContent = [track.artist, track.version].filter(Boolean).join(" / ") || track.url;
   updatePlayerMeta(track);
+  updateMediaSessionMetadata(track);
+}
+
+function setupMediaSession() {
+  if (!("mediaSession" in navigator)) return;
+
+  setMediaSessionAction("play", () => {
+    els.audio.play().catch(() => {});
+  });
+  setMediaSessionAction("pause", () => {
+    els.audio.pause();
+  });
+  setMediaSessionAction("previoustrack", () => {
+    playAdjacent(-1, { autoplay: true });
+  });
+  setMediaSessionAction("nexttrack", () => {
+    playAdjacent(1, { autoplay: true });
+  });
+  setMediaSessionAction("seekbackward", (details) => {
+    seekAudioBy(-(details?.seekOffset || 10));
+  });
+  setMediaSessionAction("seekforward", (details) => {
+    seekAudioBy(details?.seekOffset || 10);
+  });
+  setMediaSessionAction("seekto", (details) => {
+    if (Number.isFinite(details?.seekTime)) {
+      els.audio.currentTime = details.seekTime;
+      updateProgress();
+    }
+  });
+  setMediaSessionAction("stop", () => {
+    els.audio.pause();
+    els.audio.currentTime = 0;
+    updateProgress();
+  });
+}
+
+function setMediaSessionAction(action, handler) {
+  try {
+    navigator.mediaSession.setActionHandler(action, handler);
+  } catch {
+    // Some browsers expose Media Session but support only part of its actions.
+  }
+}
+
+function updateMediaSessionMetadata(track) {
+  if (!("mediaSession" in navigator) || !("MediaMetadata" in window)) return;
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: track.title,
+    artist: track.artist || "sak_Uta",
+    album: [track.version, "sak_Uta"].filter(Boolean).join(" · "),
+    artwork: [
+      { src: new URL("./icon-192.png", location.href).href, sizes: "192x192", type: "image/png" },
+      { src: new URL("./icon-512.png", location.href).href, sizes: "512x512", type: "image/png" },
+    ],
+  });
+}
+
+function updateMediaSessionPlaybackState(playbackState) {
+  if (!("mediaSession" in navigator)) return;
+  try {
+    navigator.mediaSession.playbackState = playbackState;
+  } catch {
+    // Older WebKit versions may not expose playbackState.
+  }
+}
+
+function updateMediaSessionPosition() {
+  if (!("mediaSession" in navigator) || !navigator.mediaSession.setPositionState) return;
+  const duration = els.audio.duration;
+  if (!Number.isFinite(duration) || duration <= 0) return;
+  try {
+    navigator.mediaSession.setPositionState({
+      duration,
+      playbackRate: els.audio.playbackRate || 1,
+      position: Math.min(Math.max(els.audio.currentTime, 0), duration),
+    });
+  } catch {
+    // Position controls are optional across browsers.
+  }
+}
+
+function seekAudioBy(seconds) {
+  const duration = els.audio.duration;
+  if (!Number.isFinite(duration)) return;
+  els.audio.currentTime = Math.min(Math.max(els.audio.currentTime + seconds, 0), duration);
+  updateProgress();
 }
 
 function updatePlayerMeta(track = getCurrentTrack()) {
@@ -2049,6 +2139,7 @@ function updateProgress() {
     els.seek.value = Math.round(progress * Number(els.seek.max || 1000));
     drawWaveform(progress);
   }
+  updateMediaSessionPosition();
 }
 
 function toggleFavorite(id) {
