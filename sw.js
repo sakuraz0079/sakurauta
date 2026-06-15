@@ -1,18 +1,18 @@
-const CACHE_NAME = "sak-uta-app-v91";
+const CACHE_NAME = "sak-uta-app-v92";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./style.css?v=20260615-5",
-  "./app.js?v=20260615-5",
+  "./style.css?v=20260615-6",
+  "./app.js?v=20260615-6",
   "./icon/sak-chan-face.png",
-  "./manifest.webmanifest",
+  "./manifest.webmanifest?v=20260615-6",
   "./icon/IMG_2956.png",
   "./icon/IMG_2957.png",
   "./icon/sak-uta-logo-transparent.png",
-  "./icon-192.png",
-  "./icon-512.png",
-  "./icon-maskable-512.png",
-  "./apple-touch-icon.png"
+  "./icon-192.png?v=20260615-6",
+  "./icon-512.png?v=20260615-6",
+  "./icon-maskable-512.png?v=20260615-6",
+  "./apple-touch-icon.png?v=20260615-6"
 ];
 
 self.addEventListener("install", (event) => {
