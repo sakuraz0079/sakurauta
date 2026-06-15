@@ -1067,6 +1067,23 @@ h1 {
   color: #fff;
 }
 
+.inline-share-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.inline-share-actions button {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
 .edit-sync-status {
   grid-column: 1 / -1;
   display: flex;

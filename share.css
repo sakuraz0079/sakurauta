@@ -49,14 +49,52 @@ body {
   box-shadow: 0 24px 62px rgba(0, 0, 0, 0.52);
 }
 
-.shared-artwork {
-  display: block;
+.artwork-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
   width: min(100%, 360px);
   aspect-ratio: 1;
   margin: 0 auto;
+  isolation: isolate;
+}
+
+.shared-artwork {
+  position: relative;
+  z-index: 2;
+  display: block;
+  width: 100%;
+  height: 100%;
   border-radius: 8px;
   object-fit: cover;
   box-shadow: 0 18px 44px rgba(239, 23, 68, 0.18);
+}
+
+.artwork-wave {
+  position: absolute;
+  inset: 7%;
+  z-index: 1;
+  border: 2px solid rgba(239, 23, 68, 0.42);
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.wave-two {
+  inset: 12%;
+  border-color: rgba(255, 174, 0, 0.38);
+}
+
+.artwork-stage.is-playing .shared-artwork {
+  animation: artworkBreathe 2.6s ease-in-out infinite;
+}
+
+.artwork-stage.is-playing .artwork-wave {
+  animation: artworkWave 2.6s ease-out infinite;
+}
+
+.artwork-stage.is-playing .wave-two {
+  animation-delay: 1.3s;
 }
 
 .shared-copy {
@@ -64,14 +102,8 @@ body {
   text-align: center;
 }
 
-.shared-label {
-  color: var(--accent);
-  font-size: 0.7rem;
-  font-weight: 900;
-}
-
 .shared-copy h1 {
-  margin: 7px 0 5px;
+  margin: 0 0 6px;
   overflow-wrap: anywhere;
   font-size: clamp(1.45rem, 7vw, 2.2rem);
   line-height: 1.12;
@@ -84,40 +116,94 @@ body {
   font-size: 0.95rem;
 }
 
-.shared-meta {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 7px;
-  margin-top: 13px;
-}
-
-.shared-meta span {
-  min-height: 28px;
-  padding: 5px 9px;
-  border: 1px solid rgba(255, 255, 255, 0.11);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.07);
-  color: #ddd8d5;
-  font-size: 0.76rem;
-  font-weight: 700;
-}
-
-.shared-copy .shared-memo {
-  margin-top: 14px;
-  padding: 10px;
+.share-player {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.06);
-  color: #d5cfcc;
-  font-size: 0.84rem;
-  line-height: 1.5;
-  text-align: left;
-  white-space: pre-wrap;
+  background:
+    linear-gradient(135deg, rgba(239, 23, 68, 0.13), rgba(255, 174, 0, 0.07)),
+    rgba(5, 5, 6, 0.72);
+}
+
+.share-player[hidden] {
+  display: none;
+}
+
+#shareSeek {
+  width: 100%;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.share-time {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.share-controls {
+  display: grid;
+  grid-template-columns: 46px 66px 46px;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 2px;
+}
+
+.share-controls button {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--ink);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.share-controls .share-play {
+  width: 66px;
+  height: 66px;
+  border-color: var(--accent);
+  background: var(--accent);
+  box-shadow: 0 12px 30px rgba(239, 23, 68, 0.34);
+}
+
+.share-play::before {
+  content: "";
+  width: 0;
+  height: 0;
+  margin-left: 4px;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-left: 15px solid #fff;
+}
+
+.share-play.is-playing {
+  grid-template-columns: 7px 7px;
+  gap: 6px;
+}
+
+.share-play.is-playing::before,
+.share-play.is-playing::after {
+  content: "";
+  width: 7px;
+  height: 22px;
+  margin: 0;
+  border: 0;
+  border-radius: 2px;
+  background: #fff;
 }
 
 .shared-track audio {
-  width: 100%;
-  min-height: 48px;
+  display: none;
 }
 
 .share-status {
@@ -132,9 +218,42 @@ body {
   color: #ff9caf;
 }
 
+@keyframes artworkBreathe {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: saturate(1);
+  }
+
+  50% {
+    transform: scale(1.025);
+    filter: saturate(1.18) brightness(1.06);
+  }
+}
+
+@keyframes artworkWave {
+  0% {
+    opacity: 0.7;
+    transform: scale(0.92);
+  }
+
+  75%,
+  100% {
+    opacity: 0;
+    transform: scale(1.2);
+  }
+}
+
 @media (min-width: 700px) {
   .share-shell {
     display: grid;
     align-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .artwork-stage.is-playing .shared-artwork,
+  .artwork-stage.is-playing .artwork-wave {
+    animation: none;
   }
 }

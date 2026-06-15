@@ -1601,9 +1601,6 @@ function renderInlineDetail(track) {
     render();
   }));
   actions.append(makeAction(state.favorites.has(track.id) ? "★ \u304a\u6c17\u306b\u5165\u308a" : "☆ \u304a\u6c17\u306b\u5165\u308a", () => toggleFavorite(track.id)));
-  const share = makeAction("\u5171\u6709", () => shareTrack(track, share));
-  share.setAttribute("aria-label", `${track.title}\u3092\u5171\u6709`);
-  actions.append(share);
   if (state.playlists.length) {
     const select = document.createElement("select");
     select.setAttribute("aria-label", "\u8ffd\u52a0\u5148\u30ea\u30b9\u30c8");
@@ -1616,6 +1613,13 @@ function renderInlineDetail(track) {
     actions.append(makeAction("\u30ea\u30b9\u30c8\u3092\u4f5c\u308b", showPlaylistForm));
   }
   detail.append(actions);
+
+  const shareRow = document.createElement("div");
+  shareRow.className = "inline-share-actions";
+  const share = makeAction("\u5171\u6709", () => shareTrack(track, share));
+  share.setAttribute("aria-label", `${track.title}\u3092\u5171\u6709`);
+  shareRow.append(share);
+  detail.append(shareRow);
 
   return detail;
 }

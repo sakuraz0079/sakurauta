@@ -3,10 +3,35 @@ const trackId = new URLSearchParams(location.search).get("track");
 
 const title = document.querySelector("#shareTitle");
 const artist = document.querySelector("#shareArtist");
-const meta = document.querySelector("#shareMeta");
-const memo = document.querySelector("#shareMemo");
 const audio = document.querySelector("#shareAudio");
 const status = document.querySelector("#shareStatus");
+const artworkStage = document.querySelector("#artworkStage");
+const seek = document.querySelector("#shareSeek");
+const currentTime = document.querySelector("#shareCurrentTime");
+const duration = document.querySelector("#shareDuration");
+const play = document.querySelector("#sharePlay");
+const back = document.querySelector("#shareBack");
+const forward = document.querySelector("#shareForward");
+
+let isSeeking = false;
+
+play.addEventListener("click", togglePlayback);
+back.addEventListener("click", () => seekBy(-10));
+forward.addEventListener("click", () => seekBy(10));
+seek.addEventListener("input", () => {
+  isSeeking = true;
+  currentTime.textContent = formatClock((Number(seek.value) / 1000) * (audio.duration || 0));
+});
+seek.addEventListener("change", () => {
+  if (Number.isFinite(audio.duration)) audio.currentTime = (Number(seek.value) / 1000) * audio.duration;
+  isSeeking = false;
+});
+audio.addEventListener("loadedmetadata", updateProgress);
+audio.addEventListener("timeupdate", updateProgress);
+audio.addEventListener("play", updatePlaybackState);
+audio.addEventListener("playing", updatePlaybackState);
+audio.addEventListener("pause", updatePlaybackState);
+audio.addEventListener("ended", updatePlaybackState);
 
 loadSharedTrack();
 
@@ -86,13 +111,6 @@ function normalizeTrack(raw) {
     artist: pick(raw, ["artist", "original_artist"]),
     version: versionFromFileName(fileName) || pick(raw, ["category", "version", "mix", "master", "mastering"]),
     url: pick(raw, ["url", "r2_url", "audioUrl", "audio_url", "URL"]),
-    quality: Number(pick(raw, ["quality_score", "quality", "score"])) || 0,
-    retake: Number(pick(raw, ["retake_count", "retake"])) || 0,
-    karaokeReady: parseBoolean(raw.karaoke_ready ?? raw.karaoke),
-    highestNote: pick(raw, ["highest_note"]),
-    key: pick(raw, ["key"]),
-    tags: normalizeTags(pick(raw, ["tags", "tag"])),
-    memo: pick(raw, ["memo", "note", "notes"]),
   };
 }
 
@@ -100,19 +118,6 @@ function renderTrack(track) {
   document.title = `${track.title} | sak_Uta`;
   title.textContent = track.title;
   artist.textContent = track.artist || "sak_Uta";
-
-  const items = [];
-  if (track.version) items.push(track.version);
-  if (track.quality) items.push(`${"★".repeat(track.quality)}${"☆".repeat(Math.max(0, 5 - track.quality))}`);
-  if (track.retake > 0) items.push(`Re ${track.retake}`);
-  if (track.karaokeReady) items.push("歌える");
-  if (track.highestNote) items.push(`最高音 ${track.highestNote}`);
-  if (track.key) items.push(`キー ${track.key}`);
-  items.push(...track.tags);
-  meta.replaceChildren(...items.map(makeMeta));
-
-  memo.hidden = !track.memo;
-  memo.textContent = track.memo;
   audio.src = track.url;
   status.textContent = "";
 
@@ -129,10 +134,46 @@ function renderTrack(track) {
   }
 }
 
-function makeMeta(text) {
-  const item = document.createElement("span");
-  item.textContent = text;
-  return item;
+function togglePlayback() {
+  if (audio.paused) {
+    audio.play().catch(() => {
+      status.textContent = "再生を開始できませんでした";
+      status.classList.add("error");
+    });
+  } else {
+    audio.pause();
+  }
+}
+
+function seekBy(seconds) {
+  if (!Number.isFinite(audio.duration)) return;
+  audio.currentTime = Math.min(Math.max(audio.currentTime + seconds, 0), audio.duration);
+  updateProgress();
+}
+
+function updatePlaybackState() {
+  const playing = !audio.paused && !audio.ended;
+  artworkStage.classList.toggle("is-playing", playing);
+  play.classList.toggle("is-playing", playing);
+  play.setAttribute("aria-label", playing ? "一時停止" : "再生");
+  play.setAttribute("title", playing ? "一時停止" : "再生");
+}
+
+function updateProgress() {
+  const total = audio.duration;
+  const position = audio.currentTime;
+  if (!isSeeking && Number.isFinite(total) && total > 0) {
+    seek.value = Math.round((position / total) * 1000);
+    currentTime.textContent = formatClock(position);
+  }
+  duration.textContent = Number.isFinite(total) ? formatClock(total) : "0:00";
+}
+
+function formatClock(seconds) {
+  if (!Number.isFinite(seconds)) return "0:00";
+  const minutes = Math.floor(seconds / 60);
+  const rest = Math.floor(seconds % 60);
+  return `${minutes}:${String(rest).padStart(2, "0")}`;
 }
 
 function showError(message) {
@@ -140,7 +181,7 @@ function showError(message) {
   artist.textContent = "";
   status.textContent = message;
   status.classList.add("error");
-  audio.hidden = true;
+  document.querySelector(".share-player").hidden = true;
 }
 
 function pick(source, keys) {
@@ -150,14 +191,6 @@ function pick(source, keys) {
     }
   }
   return "";
-}
-
-function parseBoolean(value) {
-  return ["true", "1", "yes", "on"].includes(String(value || "").trim().toLowerCase());
-}
-
-function normalizeTags(value) {
-  return [...new Set(String(value || "").split(/[,、/|]/).map((tag) => tag.trim()).filter(Boolean))];
 }
 
 function versionFromFileName(fileName) {

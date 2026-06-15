@@ -7,7 +7,7 @@
     <title>sak_Uta</title>
     <link rel="icon" href="./icon-192.png?v=20260615-6" type="image/png">
     <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png?v=20260615-6">
-    <link rel="stylesheet" href="./share.css?v=20260615-1">
+    <link rel="stylesheet" href="./share.css?v=20260615-2">
   </head>
   <body>
     <main class="share-shell">
@@ -16,19 +16,34 @@
       </header>
 
       <section class="shared-track" id="sharedTrack" aria-live="polite">
-        <img class="shared-artwork" src="./icon-512.png?v=20260615-6" alt="">
+        <div class="artwork-stage" id="artworkStage">
+          <span class="artwork-wave wave-one" aria-hidden="true"></span>
+          <span class="artwork-wave wave-two" aria-hidden="true"></span>
+          <img class="shared-artwork" src="./icon-512.png?v=20260615-6" alt="">
+        </div>
         <div class="shared-copy">
-          <span class="shared-label">SHARED TRACK</span>
           <h1 id="shareTitle">読み込み中</h1>
           <p id="shareArtist">sak_Uta</p>
-          <div class="shared-meta" id="shareMeta"></div>
-          <p class="shared-memo" id="shareMemo" hidden></p>
         </div>
-        <audio id="shareAudio" controls playsinline preload="metadata"></audio>
+
+        <div class="share-player">
+          <input id="shareSeek" type="range" min="0" max="1000" value="0" step="1" aria-label="再生位置">
+          <div class="share-time">
+            <span id="shareCurrentTime">0:00</span>
+            <span id="shareDuration">0:00</span>
+          </div>
+          <div class="share-controls">
+            <button id="shareBack" type="button" aria-label="10秒戻る" title="10秒戻る">−10</button>
+            <button id="sharePlay" class="share-play" type="button" aria-label="再生" title="再生"></button>
+            <button id="shareForward" type="button" aria-label="10秒進む" title="10秒進む">+10</button>
+          </div>
+        </div>
+
+        <audio id="shareAudio" playsinline preload="metadata"></audio>
         <p class="share-status" id="shareStatus">曲を読み込んでいます</p>
       </section>
     </main>
 
-    <script src="./share.js?v=20260615-1" type="module"></script>
+    <script src="./share.js?v=20260615-2" type="module"></script>
   </body>
 </html>
