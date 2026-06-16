@@ -500,7 +500,10 @@ async function saveTrackMetadata(id, fields) {
     if (!response.ok) throw new Error(`API error ${response.status}`);
     const text = await response.text();
     const payload = text ? JSON.parse(text) : {};
-    if (payload?.ok === false) throw new Error(payload.error || "API save error");
+    if (payload?.ok === false) {
+      clearEditTokenIfInvalid(payload.error);
+      throw new Error(payload.error || "API save error");
+    }
     return payload;
   } catch (error) {
     if (!(error instanceof TypeError)) throw error;
@@ -527,7 +530,10 @@ async function saveNewTrack(fields) {
     if (!response.ok) throw new Error(`API error ${response.status}`);
     const text = await response.text();
     const payload = text ? JSON.parse(text) : {};
-    if (payload?.ok === false) throw new Error(payload.error || "API add error");
+    if (payload?.ok === false) {
+      clearEditTokenIfInvalid(payload.error);
+      throw new Error(payload.error || "API add error");
+    }
     return payload;
   } catch (error) {
     if (!(error instanceof TypeError)) throw error;
@@ -591,7 +597,10 @@ async function requestArchiveTrack(id) {
     if (!response.ok) throw new Error(`API error ${response.status}`);
     const text = await response.text();
     const payload = text ? JSON.parse(text) : {};
-    if (payload?.ok === false) throw new Error(payload.error || "API archive error");
+    if (payload?.ok === false) {
+      clearEditTokenIfInvalid(payload.error);
+      throw new Error(payload.error || "API archive error");
+    }
     return payload;
   } catch (error) {
     if (!(error instanceof TypeError)) throw error;
@@ -607,6 +616,12 @@ async function getEditToken() {
     if (token) localStorage.setItem(EDIT_TOKEN_KEY, token);
   }
   return token;
+}
+
+function clearEditTokenIfInvalid(error) {
+  if (String(error || "").toLowerCase().includes("invalid edit token")) {
+    localStorage.removeItem(EDIT_TOKEN_KEY);
+  }
 }
 
 async function getUploadToken() {
@@ -2649,5 +2664,4 @@ function demoTracks() {
     }),
   ];
 }
-
 
