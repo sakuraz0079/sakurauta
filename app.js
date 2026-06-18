@@ -624,6 +624,17 @@ function clearEditTokenIfInvalid(error) {
   }
 }
 
+async function resetEditToken(trackId) {
+  localStorage.removeItem(EDIT_TOKEN_KEY);
+  const token = await requestSecretInput("編集パスコード", "新しい編集パスコードを入力してください");
+  if (!token) return;
+
+  localStorage.setItem(EDIT_TOKEN_KEY, token);
+  state.editError = "";
+  setEditStatus(trackId, "info", "編集パスコードを更新しました");
+  render();
+}
+
 async function getUploadToken() {
   let token = localStorage.getItem(UPLOAD_TOKEN_KEY) || "";
   if (!token) {
@@ -1699,6 +1710,13 @@ function renderMetadataEditor(track) {
     error.textContent = state.editError;
     form.append(error);
   }
+
+  const resetToken = document.createElement("button");
+  resetToken.type = "button";
+  resetToken.className = "edit-token-reset";
+  resetToken.textContent = "編集パスコードを再入力";
+  resetToken.addEventListener("click", () => resetEditToken(track.id));
+  form.append(resetToken);
 
   const actions = document.createElement("div");
   actions.className = "edit-actions";

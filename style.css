@@ -1433,6 +1433,22 @@ h1 {
   font-weight: 800;
 }
 
+.edit-token-reset {
+  justify-self: start;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.78rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.edit-token-reset:active {
+  color: #fff;
+}
+
 .empty {
   display: grid;
   justify-items: center;
