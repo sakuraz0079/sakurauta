@@ -1227,6 +1227,10 @@ h1 {
   line-height: 1.35;
 }
 
+.wav-file-field small.warning {
+  color: #ffd166;
+}
+
 .add-track-diagnosis {
   display: grid;
   gap: 6px;

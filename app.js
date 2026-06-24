@@ -18,6 +18,7 @@ const PAGE_SIZE = 20;
 const EXCLUDED_GENRE_TAGS = new Set(["mastering"]);
 const PARAMS = new URLSearchParams(location.search);
 const UPDATE_CHECK_INTERVAL = 60 * 60 * 1000;
+const MAX_WORKER_UPLOAD_BYTES = 95 * 1024 * 1024;
 
 let waitingServiceWorker = null;
 let isApplyingUpdate = false;
@@ -937,6 +938,7 @@ function makeWavFileInput() {
     const file = input.files?.[0];
     if (!file) return;
     applyParsedFileName(field.closest("form"), file.name);
+    updateSelectedFileMessage(field, file);
   });
   const upload = document.createElement("button");
   upload.type = "button";
@@ -997,7 +999,7 @@ async function uploadSelectedWav(form, input, button) {
     setAddFormFeedback(form, "success", "R2アップロード完了・WAV URLを入力しました");
   } catch (error) {
     const message = error?.message || "通信に失敗しました";
-    setAddFormFeedback(form, "error", `アップロードできませんでした: ${message}`);
+    setAddFormFeedback(form, "error", `アップロードできませんでした: ${message}。通信設定、Workerの反映状況、または大きいWAVの制限を確認してください`);
   } finally {
     setUploadButtonState(button, false);
   }
@@ -1007,6 +1009,25 @@ function setUploadButtonState(button, uploading) {
   if (!button) return;
   button.disabled = Boolean(uploading);
   button.textContent = uploading ? "アップロード中" : "R2へアップロード";
+}
+
+function updateSelectedFileMessage(field, file) {
+  const message = field?.querySelector(".wav-file-message");
+  if (!message || !file) return;
+  const sizeLabel = formatFileSize(file.size);
+  if (file.size > MAX_WORKER_UPLOAD_BYTES) {
+    message.textContent = `${sizeLabel}あります。大きいWAVのため、アップロードに時間がかかったり失敗する場合があります`;
+    message.classList.add("warning");
+    return;
+  }
+  message.textContent = `${sizeLabel}です。ファイル名から曲名・Re・バージョンを自動入力し、R2へ保存できます`;
+  message.classList.remove("warning");
+}
+
+function formatFileSize(bytes) {
+  const size = Number(bytes) || 0;
+  if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))}KB`;
+  return `${(size / 1024 / 1024).toFixed(size >= 10 * 1024 * 1024 ? 0 : 1)}MB`;
 }
 
 function applyParsedFileName(form, fileName) {
