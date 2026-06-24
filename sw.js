@@ -1,10 +1,10 @@
-const CACHE_NAME = "sak-uta-app-v99";
+const CACHE_NAME = "sak-uta-app-v100";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./share.html",
-  "./style.css?v=20260618-1",
-  "./app.js?v=20260618-1",
+  "./style.css?v=20260624-1",
+  "./app.js?v=20260624-1",
   "./share.css?v=20260615-4",
   "./share.js?v=20260615-4",
   "./icon/sak-chan-face.png",
@@ -41,14 +41,14 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const request = event.request;
+  const url = new URL(request.url);
+  if (request.method !== "GET" || url.origin !== location.origin) return;
   if (request.destination === "audio") return;
   event.respondWith(
     caches.match(request).then((cached) => {
       return cached || fetch(request).then((response) => {
-        if (request.method === "GET" && new URL(request.url).origin === location.origin) {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-        }
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
         return response;
       });
     })

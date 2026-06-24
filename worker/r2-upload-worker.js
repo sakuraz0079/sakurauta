@@ -10,7 +10,7 @@ export default {
     const corsHeaders = cors(origin);
 
     if (request.method === "OPTIONS") {
-      return new Response(null, { headers: corsHeaders });
+      return new Response(null, { status: 204, headers: corsHeaders });
     }
 
     if (request.method !== "POST") {
@@ -58,7 +58,9 @@ function cors(origin) {
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "X-Upload-Token",
+    "Access-Control-Allow-Headers": "X-Upload-Token, Content-Type",
+    "Access-Control-Max-Age": "86400",
+    "Vary": "Origin",
   };
 }
 

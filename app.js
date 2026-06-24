@@ -644,6 +644,18 @@ async function getUploadToken() {
   return token;
 }
 
+async function resetUploadToken(form) {
+  localStorage.removeItem(UPLOAD_TOKEN_KEY);
+  const token = await requestSecretInput("R2アップロード用トークン", "新しいR2アップロード用トークンを入力してください");
+  if (!token) {
+    setAddFormFeedback(form, "error", "R2アップロード用トークンは更新されませんでした");
+    return;
+  }
+
+  localStorage.setItem(UPLOAD_TOKEN_KEY, token);
+  setAddFormFeedback(form, "info", "R2アップロード用トークンを更新しました");
+}
+
 async function getShareToken() {
   let token = localStorage.getItem(SHARE_TOKEN_KEY) || "";
   if (!token) {
@@ -931,10 +943,18 @@ function makeWavFileInput() {
   upload.className = "wav-upload-button";
   upload.textContent = "R2へアップロード";
   upload.addEventListener("click", () => uploadSelectedWav(field.closest("form"), input, upload));
+  const resetToken = document.createElement("button");
+  resetToken.type = "button";
+  resetToken.className = "wav-upload-token-reset";
+  resetToken.textContent = "トークン再入力";
+  resetToken.addEventListener("click", () => resetUploadToken(field.closest("form")));
   const hint = document.createElement("small");
   hint.className = "wav-file-message";
   hint.textContent = "ファイル名から曲名・Re・バージョンを自動入力し、R2へ保存できます";
-  field.append(input, upload, hint);
+  const actions = document.createElement("div");
+  actions.className = "wav-upload-actions";
+  actions.append(upload, resetToken);
+  field.append(input, actions, hint);
   return field;
 }
 
@@ -976,7 +996,8 @@ async function uploadSelectedWav(form, input, button) {
     setFormValue(form, "fileName", payload.fileName || fileName);
     setAddFormFeedback(form, "success", "R2アップロード完了・WAV URLを入力しました");
   } catch (error) {
-    setAddFormFeedback(form, "error", error?.message ? `アップロードできませんでした: ${error.message}` : "アップロードできませんでした");
+    const message = error?.message || "通信に失敗しました";
+    setAddFormFeedback(form, "error", `アップロードできませんでした: ${message}`);
   } finally {
     setUploadButtonState(button, false);
   }

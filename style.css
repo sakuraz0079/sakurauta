@@ -1204,6 +1204,22 @@ h1 {
   opacity: 0.6;
 }
 
+.wav-upload-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.wav-upload-token-reset {
+  min-height: 36px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(243, 238, 240, 0.72);
+  font-weight: 900;
+  white-space: nowrap;
+}
+
 .wav-file-field small {
   color: rgba(243, 238, 240, 0.52);
   font-size: 0.75rem;
