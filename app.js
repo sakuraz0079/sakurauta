@@ -19,6 +19,7 @@ const EXCLUDED_GENRE_TAGS = new Set(["mastering"]);
 const PARAMS = new URLSearchParams(location.search);
 const UPDATE_CHECK_INTERVAL = 60 * 60 * 1000;
 const MAX_WORKER_UPLOAD_BYTES = 95 * 1024 * 1024;
+const MULTIPART_CHUNK_BYTES = 20 * 1024 * 1024;
 
 let waitingServiceWorker = null;
 let isApplyingUpdate = false;
@@ -978,22 +979,9 @@ async function uploadSelectedWav(form, input, button) {
   setAddFormFeedback(form, "saving", "R2へアップロード中");
 
   try {
-    const body = new FormData();
-    body.set("file", file);
-    body.set("fileName", fileName);
-    const response = await fetch(WAV_UPLOAD_URL, {
-      method: "POST",
-      headers: { "X-Upload-Token": token },
-      body,
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok || payload?.ok === false) {
-      if (response.status === 401 || payload?.error === "Invalid upload token") {
-        localStorage.removeItem(UPLOAD_TOKEN_KEY);
-        throw new Error("アップロード用トークンが違います。次回もう一度入力してください");
-      }
-      throw new Error(payload?.error || `Upload error ${response.status}`);
-    }
+    const payload = file.size > MAX_WORKER_UPLOAD_BYTES
+      ? await uploadWavMultipart(file, fileName, token, button, form)
+      : await uploadWavSingle(file, fileName, token);
     setFormValue(form, "url", payload.url || "");
     setFormValue(form, "fileName", payload.fileName || fileName);
     setAddFormFeedback(form, "success", "R2アップロード完了・WAV URLを入力しました");
@@ -1003,6 +991,98 @@ async function uploadSelectedWav(form, input, button) {
   } finally {
     setUploadButtonState(button, false);
   }
+}
+
+async function uploadWavSingle(file, fileName, token) {
+  const body = new FormData();
+  body.set("file", file);
+  body.set("fileName", fileName);
+  return fetchUploadJson(WAV_UPLOAD_URL, {
+    method: "POST",
+    headers: uploadTokenHeaders(token),
+    body,
+  });
+}
+
+async function uploadWavMultipart(file, fileName, token, button, form) {
+  let uploadId = "";
+  let storedFileName = fileName;
+  try {
+    const created = await fetchUploadJson(`${WAV_UPLOAD_URL}?action=create`, {
+      method: "POST",
+      headers: uploadTokenHeaders(token, true),
+      body: JSON.stringify({
+        fileName,
+        contentType: file.type || "audio/wav",
+      }),
+    });
+    uploadId = created.uploadId;
+    storedFileName = created.fileName || fileName;
+    const totalParts = Math.ceil(file.size / MULTIPART_CHUNK_BYTES);
+    const parts = [];
+
+    for (let index = 0; index < totalParts; index += 1) {
+      const partNumber = index + 1;
+      const start = index * MULTIPART_CHUNK_BYTES;
+      const chunk = file.slice(start, Math.min(start + MULTIPART_CHUNK_BYTES, file.size));
+      button.textContent = `送信中 ${partNumber}/${totalParts}`;
+      setAddFormFeedback(form, "saving", `R2へ分割アップロード中 ${partNumber}/${totalParts}`);
+      const query = new URLSearchParams({
+        action: "part",
+        fileName: storedFileName,
+        uploadId,
+        partNumber: String(partNumber),
+      });
+      const uploadedPart = await fetchUploadJson(`${WAV_UPLOAD_URL}?${query}`, {
+        method: "PUT",
+        headers: uploadTokenHeaders(token),
+        body: chunk,
+      });
+      parts.push({
+        partNumber: uploadedPart.partNumber,
+        etag: uploadedPart.etag,
+      });
+    }
+
+    button.textContent = "R2で結合中";
+    setAddFormFeedback(form, "saving", "分割したWAVをR2で結合中");
+    return fetchUploadJson(`${WAV_UPLOAD_URL}?action=complete`, {
+      method: "POST",
+      headers: uploadTokenHeaders(token, true),
+      body: JSON.stringify({
+        fileName: storedFileName,
+        uploadId,
+        parts,
+      }),
+    });
+  } catch (error) {
+    if (uploadId) {
+      fetch(`${WAV_UPLOAD_URL}?action=abort`, {
+        method: "DELETE",
+        headers: uploadTokenHeaders(token, true),
+        body: JSON.stringify({ fileName: storedFileName, uploadId }),
+      }).catch(() => {});
+    }
+    throw error;
+  }
+}
+
+function uploadTokenHeaders(token, json = false) {
+  return {
+    "X-Upload-Token": token,
+    ...(json ? { "Content-Type": "application/json" } : {}),
+  };
+}
+
+async function fetchUploadJson(url, options) {
+  const response = await fetch(url, options);
+  const payload = await response.json().catch(() => ({}));
+  if (response.ok && payload?.ok !== false) return payload;
+  if (response.status === 401 || payload?.error === "Invalid upload token") {
+    localStorage.removeItem(UPLOAD_TOKEN_KEY);
+    throw new Error("アップロード用トークンが違います。次回もう一度入力してください");
+  }
+  throw new Error(payload?.error || `Upload error ${response.status}`);
 }
 
 function setUploadButtonState(button, uploading) {
@@ -1016,7 +1096,8 @@ function updateSelectedFileMessage(field, file) {
   if (!message || !file) return;
   const sizeLabel = formatFileSize(file.size);
   if (file.size > MAX_WORKER_UPLOAD_BYTES) {
-    message.textContent = `${sizeLabel}あります。大きいWAVのため、アップロードに時間がかかったり失敗する場合があります`;
+    const partCount = Math.ceil(file.size / MULTIPART_CHUNK_BYTES);
+    message.textContent = `${sizeLabel}です。${partCount}分割してR2へアップロードします`;
     message.classList.add("warning");
     return;
   }
