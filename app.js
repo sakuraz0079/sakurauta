@@ -20,6 +20,8 @@ const PARAMS = new URLSearchParams(location.search);
 const UPDATE_CHECK_INTERVAL = 60 * 60 * 1000;
 const MAX_WORKER_UPLOAD_BYTES = 95 * 1024 * 1024;
 const MULTIPART_CHUNK_BYTES = 20 * 1024 * 1024;
+const MULTIPART_PARALLEL_UPLOADS = 3;
+const MULTIPART_MAX_ATTEMPTS = 3;
 
 let waitingServiceWorker = null;
 let isApplyingUpdate = false;
@@ -1019,33 +1021,54 @@ async function uploadWavMultipart(file, fileName, token, button, form) {
     uploadId = created.uploadId;
     storedFileName = created.fileName || fileName;
     const totalParts = Math.ceil(file.size / MULTIPART_CHUNK_BYTES);
-    const parts = [];
+    const parts = new Array(totalParts);
+    const partProgress = new Array(totalParts).fill(0);
+    let nextPartIndex = 0;
+    const updateProgress = () => {
+      const sentBytes = partProgress.reduce((sum, bytes) => sum + bytes, 0);
+      const percent = Math.min(100, Math.round((sentBytes / file.size) * 100));
+      button.textContent = `送信中 ${percent}%`;
+      setAddFormFeedback(form, "saving", `R2へアップロード中 ${percent}%`);
+    };
 
-    for (let index = 0; index < totalParts; index += 1) {
+    const uploadNextPart = async () => {
+      const index = nextPartIndex;
+      nextPartIndex += 1;
+      if (index >= totalParts) return;
+
       const partNumber = index + 1;
       const start = index * MULTIPART_CHUNK_BYTES;
       const chunk = file.slice(start, Math.min(start + MULTIPART_CHUNK_BYTES, file.size));
-      button.textContent = `送信中 ${partNumber}/${totalParts}`;
-      setAddFormFeedback(form, "saving", `R2へ分割アップロード中 ${partNumber}/${totalParts}`);
       const query = new URLSearchParams({
         action: "part",
         fileName: storedFileName,
         uploadId,
         partNumber: String(partNumber),
       });
-      const uploadedPart = await fetchUploadJson(`${WAV_UPLOAD_URL}?${query}`, {
-        method: "PUT",
-        headers: uploadTokenHeaders(token),
-        body: chunk,
-      });
-      parts.push({
+      const uploadedPart = await uploadPartWithRetry(
+        `${WAV_UPLOAD_URL}?${query}`,
+        chunk,
+        token,
+        (loaded) => {
+          partProgress[index] = loaded;
+          updateProgress();
+        },
+      );
+      partProgress[index] = chunk.size;
+      parts[index] = {
         partNumber: uploadedPart.partNumber,
         etag: uploadedPart.etag,
-      });
-    }
+      };
+      updateProgress();
+      await uploadNextPart();
+    };
 
-    button.textContent = "R2で結合中";
-    setAddFormFeedback(form, "saving", "分割したWAVをR2で結合中");
+    updateProgress();
+    const parallelCount = Math.min(MULTIPART_PARALLEL_UPLOADS, totalParts);
+    await Promise.all(Array.from({ length: parallelCount }, () => uploadNextPart()));
+
+    button.textContent = "100%・結合中";
+    setAddFormFeedback(form, "saving", "送信100%・分割したWAVをR2で結合中");
     return fetchUploadJson(`${WAV_UPLOAD_URL}?action=complete`, {
       method: "POST",
       headers: uploadTokenHeaders(token, true),
@@ -1065,6 +1088,57 @@ async function uploadWavMultipart(file, fileName, token, button, form) {
     }
     throw error;
   }
+}
+
+async function uploadPartWithRetry(url, chunk, token, onProgress) {
+  let lastError;
+  for (let attempt = 1; attempt <= MULTIPART_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      if (attempt > 1) onProgress(0);
+      return await uploadPartWithProgress(url, chunk, token, onProgress);
+    } catch (error) {
+      lastError = error;
+      if (String(error?.message || "").includes("トークンが違います")) throw error;
+      if (attempt < MULTIPART_MAX_ATTEMPTS) {
+        await new Promise((resolve) => setTimeout(resolve, 800 * attempt));
+      }
+    }
+  }
+  throw lastError || new Error("分割データを送信できませんでした");
+}
+
+function uploadPartWithProgress(url, chunk, token, onProgress) {
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open("PUT", url);
+    request.setRequestHeader("X-Upload-Token", token);
+    request.timeout = 5 * 60 * 1000;
+    request.upload.addEventListener("progress", (event) => {
+      if (event.lengthComputable) onProgress(Math.min(event.loaded, chunk.size));
+    });
+    request.addEventListener("load", () => {
+      let payload = {};
+      try {
+        payload = JSON.parse(request.responseText || "{}");
+      } catch {
+        payload = {};
+      }
+      if (request.status >= 200 && request.status < 300 && payload?.ok !== false) {
+        onProgress(chunk.size);
+        resolve(payload);
+        return;
+      }
+      if (request.status === 401 || payload?.error === "Invalid upload token") {
+        localStorage.removeItem(UPLOAD_TOKEN_KEY);
+        reject(new Error("アップロード用トークンが違います。次回もう一度入力してください"));
+        return;
+      }
+      reject(new Error(payload?.error || `Upload error ${request.status}`));
+    });
+    request.addEventListener("error", () => reject(new Error("分割データの通信に失敗しました")));
+    request.addEventListener("timeout", () => reject(new Error("分割データの送信がタイムアウトしました")));
+    request.send(chunk);
+  });
 }
 
 function uploadTokenHeaders(token, json = false) {
@@ -1097,7 +1171,7 @@ function updateSelectedFileMessage(field, file) {
   const sizeLabel = formatFileSize(file.size);
   if (file.size > MAX_WORKER_UPLOAD_BYTES) {
     const partCount = Math.ceil(file.size / MULTIPART_CHUNK_BYTES);
-    message.textContent = `${sizeLabel}です。${partCount}分割してR2へアップロードします`;
+    message.textContent = `${sizeLabel}です。${partCount}分割し、3件ずつ並行してR2へアップロードします`;
     message.classList.add("warning");
     return;
   }
