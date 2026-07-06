@@ -6,6 +6,7 @@ const FAVORITES_KEY = "utawav.favorites";
 const RECENT_KEY = "utawav.recent";
 const LAST_TRACK_KEY = "utawav.lastTrack";
 const DAILY_PICK_HISTORY_KEY = "utawav.dailyPickHistory";
+const DAILY_LINE_HISTORY_KEY = "utawav.dailyLineHistory";
 const SEARCH_HISTORY_KEY = "utawav.searchHistory";
 const EDIT_TOKEN_KEY = "utawav.editToken";
 const UPLOAD_TOKEN_KEY = "utawav.uploadToken";
@@ -37,6 +38,8 @@ const state = {
   detailId: "",
   dailyPickId: "",
   dailyLineNonce: 0,
+  dailyLineText: "",
+  dailyLineTrackId: "",
   editId: "",
   savingEditId: "",
   editError: "",
@@ -1362,7 +1365,12 @@ function renderDailyPick() {
   title.textContent = track.title;
 
   const line = document.createElement("em");
-  line.textContent = sakChanLineV2(track, state.dailyLineNonce);
+  if (!state.dailyLineText || state.dailyLineTrackId !== track.id) {
+    state.dailyLineText = sakChanLineV2(track, state.dailyLineNonce);
+    state.dailyLineTrackId = track.id;
+    rememberDailyLine(state.dailyLineText);
+  }
+  line.textContent = state.dailyLineText;
 
   const meta = document.createElement("small");
   const reasons = [];
@@ -1383,6 +1391,8 @@ function renderDailyPick() {
   change.addEventListener("click", () => {
     state.dailyLineNonce += 1;
     state.dailyPickId = chooseDailyPick({ rotate: true })?.id || "";
+    state.dailyLineText = "";
+    state.dailyLineTrackId = "";
     rememberDailyPick(state.dailyPickId);
     render();
   });
@@ -1447,6 +1457,8 @@ function getDailyPick() {
   if (existing) return existing;
   const pick = chooseDailyPick();
   state.dailyPickId = pick?.id || "";
+  state.dailyLineText = "";
+  state.dailyLineTrackId = "";
   rememberDailyPick(state.dailyPickId);
   return pick;
 }
@@ -1470,6 +1482,12 @@ function rememberDailyPick(id) {
   if (!id) return;
   const history = [id, ...readArray(DAILY_PICK_HISTORY_KEY).filter((item) => item !== id)].slice(0, 12);
   localStorage.setItem(DAILY_PICK_HISTORY_KEY, JSON.stringify(history));
+}
+
+function rememberDailyLine(line) {
+  if (!line) return;
+  const history = [line, ...readArray(DAILY_LINE_HISTORY_KEY).filter((item) => item !== line)].slice(0, 80);
+  localStorage.setItem(DAILY_LINE_HISTORY_KEY, JSON.stringify(history));
 }
 
 function randomSeed(salt = "") {
@@ -1609,12 +1627,59 @@ function sakChanLineV2(track, nonce = 0) {
     "今日はこの曲から始めてみよ。",
     "なんとなく、今これが呼んでる気がする。",
     "迷ったらこれ。sakちゃんセンサー的にはあり。",
+    "今日はこの一曲に寄り道してみよ。",
+    "棚の奥から、いいタイミングで出てきた感じ。",
+    "今の気分に合うか、ちょっとだけ試してみよ。",
+    "こういう偶然から、また好きになることもあるよね。",
+    "一曲だけ選ぶなら、今日はこれに賭けてみたい。",
+    "理由はあとづけでいいから、まず聴いてみよ。",
+    "忘れかけてた音に会いにいこ。",
+    "今日の耳には、この曲がちょうどよさそう。",
+    "再生した瞬間に空気が変わるかも。",
+    "いま選ばれたの、ちょっと縁がある気がする。",
+    "何度目でも、今日の聴こえ方は今日だけ。",
+    "このテイク、今なら違うところが見つかるかも。",
+    "ふと戻りたくなる曲って、ちゃんとあるよね。",
+    "今日はこの声の温度から始めよ。",
+    "一回まっさらにして、この曲を迎えにいこ。",
+    "気負わず再生。いいところだけ拾ってこ。",
+    "過去の自分から一曲届いてるよ。",
+    "今日はこの曲に数分だけ預けてみよ。",
+    "選曲に迷う時間も好きだけど、そろそろこれ聴こ。",
+    "音が鳴ったら、たぶん思い出すものがある。",
+    "この曲を選んだ日の自分、どんな感じだったかな。",
+    "久しぶりでも、きっとすぐ戻れる曲。",
+    "今日の一曲目にも、途中の一曲にもよさそう。",
+    "この声、今の自分にはどう聴こえるだろ。",
+    "ちょっと意外な選曲くらいが、今日は楽しいかも。",
+    "耳が決める前に、sakちゃんが先に決めました。",
+    "まだ覚えてるところ、変わって聴こえるところ、探そ。",
+    "この曲の好きな瞬間、もう一回見つけにいこ。",
+    "再生ボタンの先に、いい数分がありますように。",
+    "今日は採点なしで、ただ聴く日にしてもいい。",
+    "たまには自分の声を、他人の曲みたいに聴いてみよ。",
+    "今なら素直に受け取れそうな一曲。",
+    "この曲、今日の景色に混ぜてみたい。",
+    "選ばれたからには、最初の一音だけでもどうぞ。",
+    "少し懐かしくて、少し新しい。そんな聴き方できるかも。",
+    "ここで会ったのも何かの縁。ひとまず再生しよ。",
+    "聴き返すたび、録った日の続きをしてる気がする。",
+    "今日の自分と、この曲をもう一度会わせてみよ。",
+    "上手い下手は置いといて、この瞬間を楽しも。",
+    "一曲ぶんだけ、時間を巻き戻してみよ。",
+    "この選曲、案外いまの正解かもしれない。",
+    "音量を少し整えて、ゆっくり入っていこ。",
+    "聴く理由がなくても、聴きたい瞬間はある。",
+    "今日はこの曲が、ちゃんと順番を待ってたみたい。",
   ]);
 
   const lines = groups.flat();
   const dayKey = new Date().toLocaleDateString("ja-JP");
   const seed = hashString(`${track.id}:${dayKey}:${nonce}:${track.title}`);
-  return lines[seed % lines.length];
+  const recentLines = new Set(readArray(DAILY_LINE_HISTORY_KEY));
+  const freshLines = lines.filter((candidate) => !recentLines.has(candidate));
+  const pool = freshLines.length ? freshLines : lines;
+  return pool[seed % pool.length];
 }
 
 function updateClearSearchButton() {
