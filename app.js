@@ -5,6 +5,7 @@ const CACHE_KEY = "utawav.tracks";
 const FAVORITES_KEY = "utawav.favorites";
 const RECENT_KEY = "utawav.recent";
 const LAST_TRACK_KEY = "utawav.lastTrack";
+const DURATION_CACHE_KEY = "utawav.trackDurations";
 const DAILY_PICK_HISTORY_KEY = "utawav.dailyPickHistory";
 const DAILY_LINE_HISTORY_KEY = "utawav.dailyLineHistory";
 const SEARCH_HISTORY_KEY = "utawav.searchHistory";
@@ -26,6 +27,7 @@ const MULTIPART_MAX_ATTEMPTS = 3;
 
 let waitingServiceWorker = null;
 let isApplyingUpdate = false;
+const durationLoads = new Map();
 
 const state = {
   tracks: [],
@@ -40,6 +42,7 @@ const state = {
   dailyLineNonce: 0,
   dailyLineText: "",
   dailyLineTrackId: "",
+  durations: readJson(DURATION_CACHE_KEY) || {},
   editId: "",
   savingEditId: "",
   editError: "",
@@ -256,7 +259,11 @@ function bindEvents() {
     updatePlayerControls();
     render();
   });
-  els.audio.addEventListener("loadedmetadata", updateProgress);
+  els.audio.addEventListener("loadedmetadata", () => {
+    updateProgress();
+    const track = getCurrentTrack();
+    if (track) saveTrackDuration(track, els.audio.duration);
+  });
   els.audio.addEventListener("timeupdate", updateProgress);
 }
 
@@ -841,6 +848,7 @@ function render() {
   for (const track of pageTracks) {
     els.list.append(renderTrack(track));
   }
+  loadVisibleTrackDurations(pageTracks);
 }
 
 function renderAddTrackPanel() {
@@ -1821,7 +1829,7 @@ function renderTrack(track) {
   if (Number(track.retake) > 0) stats.append(makeStat(`Re ${track.retake}`, "retake"));
 
   const meta = node.querySelector(".track-meta");
-  meta.textContent = [track.version, track.displayDate].filter(Boolean).join(" · ");
+  meta.textContent = trackMetaText(track);
 
   if (state.editStatus?.id === track.id && !expanded) {
     const status = renderEditStatus();
@@ -2466,6 +2474,72 @@ function updateProgress() {
     els.seek.value = Math.round(progress * Number(els.seek.max || 1000));
     drawWaveform(progress);
   }
+}
+
+function trackMetaText(track) {
+  const duration = Number(state.durations[track.url]);
+  const durationText = Number.isFinite(duration) && duration > 0 ? formatClock(duration) : "";
+  return [durationText, track.version, track.displayDate].filter(Boolean).join(" · ");
+}
+
+function loadVisibleTrackDurations(tracks) {
+  const pending = tracks.filter((track) => {
+    const duration = Number(state.durations[track.url]);
+    return track.url && (!Number.isFinite(duration) || duration <= 0);
+  });
+  let nextIndex = 0;
+  const loadNext = async () => {
+    const track = pending[nextIndex];
+    nextIndex += 1;
+    if (!track) return;
+    const duration = await loadTrackDuration(track).catch(() => 0);
+    if (duration > 0) saveTrackDuration(track, duration);
+    await loadNext();
+  };
+  const parallel = Math.min(2, pending.length);
+  Promise.all(Array.from({ length: parallel }, () => loadNext())).catch(() => {});
+}
+
+function loadTrackDuration(track) {
+  if (durationLoads.has(track.url)) return durationLoads.get(track.url);
+  const request = new Promise((resolve, reject) => {
+    const audio = new Audio();
+    const timeout = window.setTimeout(() => {
+      cleanup();
+      reject(new Error("duration timeout"));
+    }, 15000);
+    const cleanup = () => {
+      window.clearTimeout(timeout);
+      audio.removeAttribute("src");
+      audio.load();
+    };
+    audio.preload = "metadata";
+    audio.addEventListener("loadedmetadata", () => {
+      const duration = audio.duration;
+      cleanup();
+      if (Number.isFinite(duration) && duration > 0) resolve(duration);
+      else reject(new Error("duration unavailable"));
+    }, { once: true });
+    audio.addEventListener("error", () => {
+      cleanup();
+      reject(new Error("duration unavailable"));
+    }, { once: true });
+    audio.src = track.url;
+  }).finally(() => durationLoads.delete(track.url));
+  durationLoads.set(track.url, request);
+  return request;
+}
+
+function saveTrackDuration(track, duration) {
+  if (!track?.url || !Number.isFinite(duration) || duration <= 0) return;
+  const seconds = Math.round(duration);
+  if (Number(state.durations[track.url]) === seconds) return;
+  state.durations[track.url] = seconds;
+  localStorage.setItem(DURATION_CACHE_KEY, JSON.stringify(state.durations));
+  const card = [...els.list.querySelectorAll(".track-card")]
+    .find((item) => item.dataset.trackId === track.id);
+  const meta = card?.querySelector(".track-meta");
+  if (meta) meta.textContent = trackMetaText(track);
 }
 
 function toggleFavorite(id) {
