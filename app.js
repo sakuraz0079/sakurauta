@@ -2399,6 +2399,12 @@ function setupMediaSession() {
   setMediaSessionAction("nexttrack", () => {
     playAdjacent(1, { autoplay: true });
   });
+  setMediaSessionAction("seekbackward", () => {
+    playAdjacent(-1, { autoplay: true });
+  });
+  setMediaSessionAction("seekforward", () => {
+    playAdjacent(1, { autoplay: true });
+  });
 }
 
 function setMediaSessionAction(action, handler) {
