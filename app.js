@@ -243,12 +243,14 @@ function bindEvents() {
   els.audio.addEventListener("playing", () => setPlaybackStatus("playing", ""));
   els.audio.addEventListener("play", () => {
     state.isPlaying = true;
+    setMediaSessionPlaybackState("playing");
     expandPlayerForPlayback();
     updatePlayerControls();
     render();
   });
   els.audio.addEventListener("pause", () => {
     state.isPlaying = false;
+    setMediaSessionPlaybackState("paused");
     if (state.playbackStatus !== "error") setPlaybackStatus("idle", "");
     updatePlayerControls();
     render();
@@ -2393,6 +2395,12 @@ function updatePlayerInfo(track) {
 function setupMediaSession() {
   if (!("mediaSession" in navigator)) return;
 
+  setMediaSessionAction("play", () => {
+    resumeMediaSessionPlayback();
+  });
+  setMediaSessionAction("pause", () => {
+    els.audio.pause();
+  });
   setMediaSessionAction("previoustrack", () => {
     playAdjacent(-1, { autoplay: true });
   });
@@ -2407,11 +2415,38 @@ function setupMediaSession() {
   });
 }
 
+function resumeMediaSessionPlayback() {
+  const current = getCurrentTrack();
+  if (!current) {
+    const first = filterTracks()[0];
+    if (first) playTrack(first);
+    return;
+  }
+
+  setPlaybackStatus("loading", "読み込み中");
+  els.audio.play().catch(() => {
+    state.isPlaying = false;
+    setMediaSessionPlaybackState("paused");
+    setPlaybackStatus("error", "再生を開始できませんでした");
+    updatePlayerControls();
+    render();
+  });
+}
+
 function setMediaSessionAction(action, handler) {
   try {
     navigator.mediaSession.setActionHandler(action, handler);
   } catch {
     // Some browsers expose Media Session but support only part of its actions.
+  }
+}
+
+function setMediaSessionPlaybackState(playbackState) {
+  if (!("mediaSession" in navigator)) return;
+  try {
+    navigator.mediaSession.playbackState = playbackState;
+  } catch {
+    // Some browsers expose Media Session without writable playback state.
   }
 }
 
