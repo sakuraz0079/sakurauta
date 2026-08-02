@@ -297,11 +297,25 @@ async function loadTracks({ force = false } = {}) {
 
 async function fetchApiPayload() {
   try {
-    const response = await fetch(`${API_URL}?t=${Date.now()}`, { cache: "no-store" });
+    const response = await fetchWithTimeout(
+      `${API_URL}?t=${Date.now()}`,
+      { cache: "no-store" },
+      8000,
+    );
     if (!response.ok) throw new Error(`API error ${response.status}`);
     return await response.json();
   } catch {
     return fetchJsonp(API_URL);
+  }
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -3018,4 +3032,3 @@ function demoTracks() {
     }),
   ];
 }
-

@@ -40,6 +40,12 @@ function doPost(e) {
     }
     return json_({ ok: true, data: result });
   } catch (error) {
+    console.error(JSON.stringify({
+      event: "doPost_error",
+      action: String(e && e.parameter && e.parameter.action || ""),
+      id: String(e && e.parameter && e.parameter.id || ""),
+      message: error && error.message ? error.message : String(error),
+    }));
     return json_({
       ok: false,
       error: error && error.message ? error.message : String(error),
